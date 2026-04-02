@@ -4,6 +4,14 @@ import { Bell } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 
 export const TopBar = ({ userName, hasNotification, onNotificationClick }) => {
+  const currentHour = new Date().getHours();
+  let greeting = 'Chào buổi sáng';
+  if (currentHour >= 12 && currentHour < 18) {
+    greeting = 'Chào buổi chiều';
+  } else if (currentHour >= 18) {
+    greeting = 'Chào buổi tối';
+  }
+
   return (
     <View style={styles.topBar}>
       <View style={styles.profileArea}>
@@ -11,7 +19,7 @@ export const TopBar = ({ userName, hasNotification, onNotificationClick }) => {
           <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
         </View>
         <View style={styles.greeting}>
-          <Text style={styles.greetingSm}>Good Morning,</Text>
+          <Text style={styles.greetingSm}>{greeting},</Text>
           <Text style={styles.greetingLg}>{userName}!</Text>
         </View>
       </View>

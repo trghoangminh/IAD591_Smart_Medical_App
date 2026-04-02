@@ -10,25 +10,25 @@ export const HomeDashboard = ({ onTakeMed }) => {
     {
       id: 1,
       name: 'Metformin (500mg)',
-      instruction: '1 Tablet with food',
-      time: '08:00 AM',
-      type: 'Breakfast',
+      instruction: '1 Viên sau khi ăn',
+      time: '08:00',
+      type: 'Sáng',
       status: 'taken',
     },
     {
       id: 2,
       name: 'Lisinopril (10mg)',
-      instruction: '1 Tablet with water',
-      time: '12:30 PM',
-      type: 'Lunch',
+      instruction: '1 Viên với nước',
+      time: '12:30',
+      type: 'Trưa',
       status: 'pending',
     },
     {
       id: 3,
       name: 'Atorvastatin (20mg)',
-      instruction: '1 Tablet before sleep',
-      time: '08:00 PM',
-      type: 'Dinner',
+      instruction: '1 Viên trước khi ngủ',
+      time: '20:00',
+      type: 'Tối',
       status: 'pending',
     }
   ];
@@ -36,20 +36,20 @@ export const HomeDashboard = ({ onTakeMed }) => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.dateText}>Tuesday, October 26</Text>
+        <Text style={styles.dateText}>Thứ Ba, 26 tháng 10</Text>
       </View>
 
       <Card style={styles.progressWidget}>
         <View style={styles.progressText}>
-          <Text style={styles.progressTitle}>Daily Adherence</Text>
-          <Text style={styles.progressSubtitle}>You've taken 1 out of 3 meds today. Keep it up!</Text>
+          <Text style={styles.progressTitle}>Tiến độ uống thuốc</Text>
+          <Text style={styles.progressSubtitle}>Bạn đã uống 1/3 liều hôm nay. Cố gắng phát huy nhé!</Text>
         </View>
         <View style={styles.progressCircle}>
           <Text style={styles.progressPercentage}>33%</Text>
         </View>
       </Card>
 
-      <Text style={styles.sectionTitle}>Today's Schedule</Text>
+      <Text style={styles.sectionTitle}>Lịch uống hôm nay</Text>
       
       {schedule.map((med) => (
         <Card key={med.id} style={styles.medCard}>
@@ -77,13 +77,13 @@ export const HomeDashboard = ({ onTakeMed }) => {
               {med.status === 'taken' && (
                 <View style={[styles.statusIndicator, { backgroundColor: theme.colors.primaryLight }]}>
                   <CheckCircle2 size={14} color={theme.colors.primary} />
-                  <Text style={[styles.statusText, { color: theme.colors.primary }]}>Taken</Text>
+                  <Text style={[styles.statusText, { color: theme.colors.primary }]}>Đã uống</Text>
                 </View>
               )}
               {med.status === 'pending' && (
                 <View style={[styles.statusIndicator, { backgroundColor: '#FFF3E0' }]}>
                   <Clock size={14} color="#F57C00" />
-                  <Text style={[styles.statusText, { color: '#F57C00' }]}>Upcoming</Text>
+                  <Text style={[styles.statusText, { color: '#F57C00' }]}>Sắp tới</Text>
                 </View>
               )}
             </View>
@@ -95,7 +95,7 @@ export const HomeDashboard = ({ onTakeMed }) => {
                 variant="primary" 
                 onPress={() => onTakeMed(med)}
               >
-                Take Now
+                Uống ngay
               </Button>
             </View>
           )}

@@ -6,9 +6,9 @@ import { theme } from '../styles/theme';
 
 export const Notifications = () => {
   const alerts = [
-    { id: 1, type: 'warning', title: 'Missed Dose', message: 'You may have missed your 12:30 PM Lisinopril.', time: '1 hr ago' },
-    { id: 2, type: 'info', title: 'Refill Reminder', message: 'You have only 5 days left for Metformin.', time: '5 hrs ago' },
-    { id: 3, type: 'success', title: 'Weekly Goal Met', message: 'Great job! 100% adherence this week.', time: '1 day ago' },
+    { id: 1, type: 'warning', title: 'Bỏ lỡ liều', message: 'Bạn có thể đã quên uống Lisinopril lúc 12:30.', time: '1 giờ trước' },
+    { id: 2, type: 'info', title: 'Nhắc nhở nạp thêm', message: 'Bạn chỉ còn 5 ngày thuốc Metformin.', time: '5 giờ trước' },
+    { id: 3, type: 'success', title: 'Đạt mục tiêu tuần', message: 'Làm tốt lắm! Bạn đã tuân thủ 100% trong tuần này.', time: '1 ngày trước' },
   ];
 
   const getIcon = (type) => {
@@ -30,7 +30,7 @@ export const Notifications = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.title}>Thông báo</Text>
       </View>
 
       <View style={styles.list}>

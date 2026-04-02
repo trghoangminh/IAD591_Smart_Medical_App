@@ -5,24 +5,24 @@ import { CheckCircle2, XCircle } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 
 export const History = () => {
-  const [filter, setFilter] = useState('Today'); // Today, 7 Days, 30 Days
+  const [filter, setFilter] = useState('Hôm nay'); // Today, 7 Days, 30 Days
 
   const timeline = [
-    { id: 1, time: '12:35 PM', scheduled: '12:30 PM', name: 'Lisinopril (10mg)', status: 'taken', date: 'Today' },
-    { id: 2, time: '08:05 AM', scheduled: '08:00 AM', name: 'Metformin (500mg)', status: 'taken', date: 'Today' },
-    { id: 3, time: '09:00 PM', scheduled: '08:00 PM', name: 'Atorvastatin (20mg)', status: 'missed', date: 'Yesterday' },
-    { id: 4, time: '12:30 PM', scheduled: '12:30 PM', name: 'Lisinopril (10mg)', status: 'taken', date: 'Yesterday' },
+    { id: 1, time: '12:35 PM', scheduled: '12:30 PM', name: 'Lisinopril (10mg)', status: 'taken', date: 'Hôm nay' },
+    { id: 2, time: '08:05 AM', scheduled: '08:00 AM', name: 'Metformin (500mg)', status: 'taken', date: 'Hôm nay' },
+    { id: 3, time: '09:00 PM', scheduled: '08:00 PM', name: 'Atorvastatin (20mg)', status: 'missed', date: 'Hôm qua' },
+    { id: 4, time: '12:30 PM', scheduled: '12:30 PM', name: 'Lisinopril (10mg)', status: 'taken', date: 'Hôm qua' },
   ];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>History</Text>
-        <Text style={styles.subtitle}>Track your medication timeline</Text>
+        <Text style={styles.title}>Lịch sử</Text>
+        <Text style={styles.subtitle}>Theo dõi lịch sử uống thuốc</Text>
       </View>
 
       <View style={styles.filterRow}>
-        {['Today', '7 Days', '30 Days'].map(f => (
+        {['Hôm nay', '7 Ngày', '30 Ngày'].map(f => (
           <TouchableOpacity 
             key={f} 
             style={[styles.filterChip, filter === f && styles.filterChipActive]}
@@ -53,8 +53,8 @@ export const History = () => {
                 <Text style={styles.itemDate}>{item.date}</Text>
               </View>
               <View style={styles.cardDetails}>
-                <Text style={styles.actualTime}>Taken: {item.time}</Text>
-                <Text style={styles.scheduledTime}>Scheduled: {item.scheduled}</Text>
+                <Text style={styles.actualTime}>Đã uống: {item.time}</Text>
+                <Text style={styles.scheduledTime}>Đã lên lịch: {item.scheduled}</Text>
               </View>
             </Card>
           </View>

@@ -10,11 +10,17 @@ import { History } from './src/screens/History';
 import { Profile } from './src/screens/Profile';
 import { Notifications } from './src/screens/Notifications';
 import { MedicationReminder } from './src/screens/MedicationReminder';
+import { LoginScreen } from './src/screens/LoginScreen';
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [activeMedication, setActiveMedication] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  if (!isLoggedIn) {
+    return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
+  }
 
   const renderScreen = () => {
     if (showNotifications) return <Notifications />;
@@ -39,7 +45,7 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="dark" />
       <TopBar 
-        userName="Eleanor" 
+        userName="Anh Tuấn" 
         hasNotification={true} 
         onNotificationClick={() => setShowNotifications(!showNotifications)} 
       />

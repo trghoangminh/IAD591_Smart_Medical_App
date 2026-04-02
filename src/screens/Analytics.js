@@ -4,16 +4,16 @@ import { Card } from '../components/Card';
 import { theme } from '../styles/theme';
 
 export const Analytics = () => {
-  const [filter, setFilter] = useState('Week'); // Week | Month
+  const [filter, setFilter] = useState('Tuần'); // Week | Month
 
   const weeklyData = [
-    { day: 'Mon', percentage: 100 },
-    { day: 'Tue', percentage: 66 },
-    { day: 'Wed', percentage: 100 },
-    { day: 'Thu', percentage: 0 },   // Highly missed day
-    { day: 'Fri', percentage: 33 },
-    { day: 'Sat', percentage: 100 },
-    { day: 'Sun', percentage: 80 },
+    { day: 'T2', percentage: 100 },
+    { day: 'T3', percentage: 66 },
+    { day: 'T4', percentage: 100 },
+    { day: 'T5', percentage: 0 },   // Highly missed day
+    { day: 'T6', percentage: 33 },
+    { day: 'T7', percentage: 100 },
+    { day: 'CN', percentage: 80 },
   ];
 
   // Dummy stats
@@ -25,12 +25,12 @@ export const Analytics = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>Report & Analytics</Text>
-        <Text style={styles.subtitle}>Track your medication adherence</Text>
+        <Text style={styles.title}>Báo cáo & Phân tích</Text>
+        <Text style={styles.subtitle}>Theo dõi tiến độ uống thuốc của bạn</Text>
       </View>
 
       <View style={styles.filterRow}>
-        {['Week', 'Month'].map(f => (
+        {['Tuần', 'Tháng'].map(f => (
           <TouchableOpacity 
             key={f} 
             style={[styles.filterChip, filter === f && styles.filterChipActive]}
@@ -42,20 +42,20 @@ export const Analytics = () => {
       </View>
 
       {/* Overview Stats & "Pie Chart" alternative (Segmented bar for React Native) */}
-      <Text style={styles.sectionTitle}>Adherence Overview</Text>
+      <Text style={styles.sectionTitle}>Tổng quan</Text>
       <Card>
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statBig}>{takenPercent}%</Text>
-            <Text style={styles.statLabel}>Compliance</Text>
+            <Text style={styles.statLabel}>Tuân thủ</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={[styles.statBig, { color: theme.colors.success }]}>{takenDoses}</Text>
-            <Text style={styles.statLabel}>Taken</Text>
+            <Text style={styles.statLabel}>Đã uống</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={[styles.statBig, { color: theme.colors.danger }]}>{missedDoses}</Text>
-            <Text style={styles.statLabel}>Missed</Text>
+            <Text style={styles.statLabel}>Bỏ lỡ</Text>
           </View>
         </View>
 
@@ -65,12 +65,12 @@ export const Analytics = () => {
           <View style={[styles.segment, { flex: missedDoses, backgroundColor: theme.colors.danger }]} />
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 }}>
-          <Text style={{ fontSize: 12, color: theme.colors.success, fontWeight: 'bold' }}>Taken (76%)</Text>
-          <Text style={{ fontSize: 12, color: theme.colors.danger, fontWeight: 'bold' }}>Missed (24%)</Text>
+          <Text style={{ fontSize: 12, color: theme.colors.success, fontWeight: 'bold' }}>Đã uống (76%)</Text>
+          <Text style={{ fontSize: 12, color: theme.colors.danger, fontWeight: 'bold' }}>Bỏ lỡ (24%)</Text>
         </View>
       </Card>
 
-      <Text style={styles.sectionTitle}>Daily Breakdown (Bar Chart)</Text>
+      <Text style={styles.sectionTitle}>Phân tích theo ngày (Biểu đồ)</Text>
       <Card>
         <View style={styles.chartContainer}>
           {weeklyData.map((d, i) => {

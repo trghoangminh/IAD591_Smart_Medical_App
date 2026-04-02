@@ -5,11 +5,11 @@ import { theme } from '../styles/theme';
 
 export const BottomNav = ({ activeTab, onTabChange }) => {
   const tabs = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'analytics', label: 'Report', icon: BarChart2 },
-    { id: 'scan', label: 'Scan', icon: ScanLine },
-    { id: 'history', label: 'History', icon: Clock },
-    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'home', label: 'Trang chủ', icon: Home },
+    { id: 'analytics', label: 'Báo cáo', icon: BarChart2 },
+    { id: 'scan', label: 'Quét', icon: ScanLine },
+    { id: 'history', label: 'Lịch sử', icon: Clock },
+    { id: 'profile', label: 'Cá nhân', icon: User },
   ];
 
   return (

@@ -12,7 +12,7 @@ export const Profile = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>Profile & Settings</Text>
+        <Text style={styles.title}>Cá nhân & Cài đặt</Text>
       </View>
 
       {/* User Info */}
@@ -25,10 +25,10 @@ export const Profile = () => {
       </Card>
 
       {/* Caregiver / Doctor Info */}
-      <Text style={styles.sectionTitle}>Medical Contacts</Text>
+      <Text style={styles.sectionTitle}>Liên hệ y tế</Text>
       <Card style={styles.contactCard}>
         <View style={styles.contactInfo}>
-          <Text style={styles.contactRole}>Primary Doctor</Text>
+          <Text style={styles.contactRole}>Bác sĩ chính</Text>
           <Text style={styles.contactName}>Dr. Gregory House</Text>
           <Text style={styles.contactPhone}>+1 (555) 019-8372</Text>
         </View>
@@ -39,7 +39,7 @@ export const Profile = () => {
       
       <Card style={styles.contactCard}>
         <View style={styles.contactInfo}>
-          <Text style={styles.contactRole}>Caregiver (Family)</Text>
+          <Text style={styles.contactRole}>Người chăm sóc</Text>
           <Text style={styles.contactName}>Chidi Anagonye</Text>
           <Text style={styles.contactPhone}>+1 (555) 124-5555</Text>
         </View>
@@ -49,12 +49,12 @@ export const Profile = () => {
       </Card>
 
       {/* Settings */}
-      <Text style={styles.sectionTitle}>Settings</Text>
+      <Text style={styles.sectionTitle}>Cài đặt</Text>
       <Card style={styles.settingCard}>
         <View style={styles.settingRow}>
           <View style={styles.settingLabel}>
             <Bell size={20} color={theme.colors.textMain} />
-            <Text style={styles.settingText}>Push Notifications</Text>
+            <Text style={styles.settingText}>Thông báo đẩy</Text>
           </View>
           <Switch 
             value={notifications} 
@@ -67,7 +67,7 @@ export const Profile = () => {
         <View style={styles.settingRow}>
           <View style={styles.settingLabel}>
             <Moon size={20} color={theme.colors.textMain} />
-            <Text style={styles.settingText}>Dark Mode</Text>
+            <Text style={styles.settingText}>Chế độ tối</Text>
           </View>
           <Switch 
             value={darkMode} 
@@ -79,9 +79,9 @@ export const Profile = () => {
       </Card>
 
       <Button variant="danger" icon={<LogOut size={20} color="#FFF" />} style={{ marginTop: theme.spacing.md }}>
-        Log Out
+        Đăng xuất
       </Button>
-      <Text style={styles.version}>App Version 1.0.0</Text>
+      <Text style={styles.version}>Phiên bản ứng dụng 1.0.0</Text>
     </ScrollView>
   );
 };

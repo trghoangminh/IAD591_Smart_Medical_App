@@ -14,8 +14,8 @@ export const ScanPrescription = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>Add Medication</Text>
-        <Text style={styles.subtitle}>Scan a pill bottle or prescription</Text>
+        <Text style={styles.title}>Thêm thuốc</Text>
+        <Text style={styles.subtitle}>Quét nhãn thuốc hoặc đơn thuốc</Text>
       </View>
 
       {step === 'camera' && (
@@ -26,7 +26,7 @@ export const ScanPrescription = () => {
             <View style={[styles.bracket, styles.tl]} />
             <View style={[styles.bracket, styles.br]} />
             <View style={[styles.bracket, styles.bl]} />
-            <Text style={styles.viewfinderText}>Align label within frame</Text>
+            <Text style={styles.viewfinderText}>Căn chỉnh nhãn trong khung</Text>
           </View>
           
           <Button 
@@ -35,7 +35,7 @@ export const ScanPrescription = () => {
             icon={<Camera size={20} color="#fff" />}
             style={{ marginTop: theme.spacing.lg }}
           >
-            Capture Image
+            Chụp ảnh
           </Button>
         </View>
       )}
@@ -44,12 +44,12 @@ export const ScanPrescription = () => {
         <View style={styles.viewfinderContainer}>
           <View style={[styles.viewfinder, { backgroundColor: '#E2E8F0', padding: 20 }]}>
              <View style={{ width: '100%', height: '100%', backgroundColor: '#CBD5E1', borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
-               <Text style={{ color: theme.colors.textMuted }}>[ Captured Image Preview ]</Text>
+               <Text style={{ color: theme.colors.textMuted }}>[ Xem trước ảnh đã chụp ]</Text>
              </View>
           </View>
           <View style={{ flexDirection: 'row', marginTop: theme.spacing.lg, gap: 12 }}>
-            <Button variant="secondary" onPress={() => setStep('camera')} icon={<RefreshCcw size={20} color={theme.colors.primary} />} style={{ flex: 1 }}>Retake</Button>
-            <Button variant="primary" onPress={handleApprove} icon={<CheckCircle2 size={20} color="#FFF" />} style={{ flex: 1 }}>Process OCR</Button>
+            <Button variant="secondary" onPress={() => setStep('camera')} icon={<RefreshCcw size={20} color={theme.colors.primary} />} style={{ flex: 1 }}>Chụp lại</Button>
+            <Button variant="primary" onPress={handleApprove} icon={<CheckCircle2 size={20} color="#FFF" />} style={{ flex: 1 }}>Xử lý OCR</Button>
           </View>
         </View>
       )}
@@ -59,28 +59,28 @@ export const ScanPrescription = () => {
           <Card>
             <View style={styles.successHeader}>
               <CheckCircle2 size={24} color={theme.colors.success} />
-              <Text style={styles.successText}>Scan Successful</Text>
+              <Text style={styles.successText}>Quét thành công</Text>
             </View>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Medication Name</Text>
+              <Text style={styles.label}>Tên thuốc</Text>
               <TextInput style={styles.input} defaultValue="Amlodipine" />
             </View>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Dosage</Text>
+              <Text style={styles.label}>Liều lượng</Text>
               <TextInput style={styles.input} defaultValue="5mg" />
             </View>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Frequency</Text>
-              <TextInput style={styles.input} defaultValue="1 Tablet Daily" />
+              <Text style={styles.label}>Tần suất</Text>
+              <TextInput style={styles.input} defaultValue="1 Viên mỗi ngày" />
             </View>
           </Card>
           
           <View style={styles.actionRow}>
-            <Button variant="secondary" onPress={() => setStep('camera')} style={{ flex: 1, marginRight: 8 }}>Scrap</Button>
-            <Button variant="primary" style={{ flex: 2 }}>Thêm vào lịch (Save)</Button>
+            <Button variant="secondary" onPress={() => setStep('camera')} style={{ flex: 1, marginRight: 8 }}>Hủy</Button>
+            <Button variant="primary" style={{ flex: 2 }}>Thêm vào lịch</Button>
           </View>
         </View>
       )}
