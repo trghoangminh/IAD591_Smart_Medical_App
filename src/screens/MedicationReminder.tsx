@@ -1,10 +1,29 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  SafeAreaView,
+  Platform,
+} from 'react-native';
 import { Button } from '../components/Button';
 import { Pill, Check, Clock, X } from 'lucide-react-native';
 import { theme } from '../styles/theme';
+import { Medication } from '../types';
 
-export const MedicationReminder = ({ medication, onClose, onConfirm }) => {
+interface MedicationReminderProps {
+  medication: Medication | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+export const MedicationReminder: React.FC<MedicationReminderProps> = ({
+  medication,
+  onClose,
+  onConfirm,
+}) => {
   if (!medication) return null;
 
   return (
@@ -17,7 +36,12 @@ export const MedicationReminder = ({ medication, onClose, onConfirm }) => {
       <View style={styles.modalBackground}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.container}>
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={onClose}
+              accessibilityLabel="Đóng"
+              accessibilityRole="button"
+            >
               <X size={32} color="#FFF" />
             </TouchableOpacity>
 
@@ -27,26 +51,28 @@ export const MedicationReminder = ({ medication, onClose, onConfirm }) => {
                   <Pill size={48} color={theme.colors.primary} />
                 </View>
               </View>
-              
+
               <Text style={styles.subtitle}>Đến giờ uống ({medication.time})</Text>
               <Text style={styles.title}>{medication.name}</Text>
               <Text style={styles.instruction}>{medication.instruction}</Text>
             </View>
 
             <View style={styles.actionContainer}>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 style={styles.confirmBtn}
                 onPress={onConfirm}
                 icon={<Check size={24} color={theme.colors.primary} />}
+                accessibilityLabel="Xác nhận đã uống thuốc"
               >
                 Đã uống
               </Button>
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 style={styles.remindBtn}
                 onPress={onClose}
                 icon={<Clock size={20} color="#FFF" />}
+                accessibilityLabel="Nhắc lại sau"
               >
                 Nhắc lại sau
               </Button>
@@ -109,7 +135,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     opacity: 0.9,
     marginBottom: 8,
-    fontWeight: '600'
+    fontWeight: '600',
   },
   title: {
     fontSize: 36,
@@ -139,5 +165,5 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.4)',
     borderRadius: theme.radius.lg,
-  }
+  },
 });

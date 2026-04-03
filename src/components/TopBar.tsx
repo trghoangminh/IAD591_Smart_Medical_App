@@ -3,7 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 
-export const TopBar = ({ userName, hasNotification, onNotificationClick }) => {
+interface TopBarProps {
+  userName: string;
+  hasNotification: boolean;
+  onNotificationClick: () => void;
+}
+
+export const TopBar: React.FC<TopBarProps> = ({ userName, hasNotification, onNotificationClick }) => {
   const currentHour = new Date().getHours();
   let greeting = 'Chào buổi sáng';
   if (currentHour >= 12 && currentHour < 18) {
@@ -23,8 +29,13 @@ export const TopBar = ({ userName, hasNotification, onNotificationClick }) => {
           <Text style={styles.greetingLg}>{userName}!</Text>
         </View>
       </View>
-      
-      <TouchableOpacity style={styles.iconBtn} onPress={onNotificationClick}>
+
+      <TouchableOpacity
+        style={styles.iconBtn}
+        onPress={onNotificationClick}
+        accessibilityLabel="Thông báo"
+        accessibilityRole="button"
+      >
         <Bell size={20} color={theme.colors.textMain} />
         {hasNotification && <View style={styles.badge} />}
       </TouchableOpacity>
@@ -38,7 +49,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: 60, // statusBar safe area approx
+    paddingTop: 60,
     paddingBottom: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderBottomLeftRadius: theme.radius.lg,
@@ -68,6 +79,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.bold,
   },
+  greeting: {},
   greetingSm: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textLight,
@@ -97,5 +109,5 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 2,
     borderColor: theme.colors.surface,
-  }
+  },
 });

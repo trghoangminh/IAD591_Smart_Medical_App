@@ -2,21 +2,21 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Card } from '../components/Card';
 import { theme } from '../styles/theme';
+import { WeeklyData } from '../types';
 
-export const Analytics = () => {
-  const [filter, setFilter] = useState('Tuần'); // Week | Month
+export const Analytics: React.FC = () => {
+  const [filter, setFilter] = useState<string>('Tuần');
 
-  const weeklyData = [
+  const weeklyData: WeeklyData[] = [
     { day: 'T2', percentage: 100 },
     { day: 'T3', percentage: 66 },
     { day: 'T4', percentage: 100 },
-    { day: 'T5', percentage: 0 },   // Highly missed day
+    { day: 'T5', percentage: 0 },
     { day: 'T6', percentage: 33 },
     { day: 'T7', percentage: 100 },
     { day: 'CN', percentage: 80 },
   ];
 
-  // Dummy stats
   const totalDoses = 21;
   const takenDoses = 16;
   const missedDoses = 5;
@@ -30,9 +30,9 @@ export const Analytics = () => {
       </View>
 
       <View style={styles.filterRow}>
-        {['Tuần', 'Tháng'].map(f => (
-          <TouchableOpacity 
-            key={f} 
+        {['Tuần', 'Tháng'].map((f) => (
+          <TouchableOpacity
+            key={f}
             style={[styles.filterChip, filter === f && styles.filterChipActive]}
             onPress={() => setFilter(f)}
           >
@@ -41,7 +41,6 @@ export const Analytics = () => {
         ))}
       </View>
 
-      {/* Overview Stats & "Pie Chart" alternative (Segmented bar for React Native) */}
       <Text style={styles.sectionTitle}>Tổng quan</Text>
       <Card>
         <View style={styles.statsRow}>
@@ -59,7 +58,6 @@ export const Analytics = () => {
           </View>
         </View>
 
-        {/* Segmented Bar simulating Pie Distribution */}
         <View style={styles.segmentedBar}>
           <View style={[styles.segment, { flex: takenDoses, backgroundColor: theme.colors.success }]} />
           <View style={[styles.segment, { flex: missedDoses, backgroundColor: theme.colors.danger }]} />
@@ -77,18 +75,50 @@ export const Analytics = () => {
             const isCritical = d.percentage === 0;
             return (
               <View key={i} style={styles.barColumn}>
-                <View style={[styles.barTrack, isCritical && { borderColor: theme.colors.danger, borderWidth: 1 }]}>
-                  <View style={[styles.barFill, { 
-                      height: `${d.percentage}%`,
-                      backgroundColor: d.percentage === 100 ? theme.colors.primary : d.percentage > 50 ? theme.colors.warning : theme.colors.danger
-                    }]} 
+                <View
+                  style={[
+                    styles.barTrack,
+                    isCritical && { borderColor: theme.colors.danger, borderWidth: 1 },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.barFill,
+                      {
+                        height: `${d.percentage}%` as `${number}%`,
+                        backgroundColor:
+                          d.percentage === 100
+                            ? theme.colors.primary
+                            : d.percentage > 50
+                            ? theme.colors.warning
+                            : theme.colors.danger,
+                      },
+                    ]}
                   />
-                  {/* Highlight missed days heavily */}
-                  {isCritical && <Text style={{ position: 'absolute', top: -16, color: theme.colors.danger, fontSize: 10, fontWeight: 'bold' }}>!!</Text>}
+                  {isCritical && (
+                    <Text
+                      style={{
+                        position: 'absolute',
+                        top: -16,
+                        color: theme.colors.danger,
+                        fontSize: 10,
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      !!
+                    </Text>
+                  )}
                 </View>
-                <Text style={[styles.dayLabel, isCritical && { color: theme.colors.danger, fontWeight: 'bold' }]}>{d.day}</Text>
+                <Text
+                  style={[
+                    styles.dayLabel,
+                    isCritical && { color: theme.colors.danger, fontWeight: 'bold' },
+                  ]}
+                >
+                  {d.day}
+                </Text>
               </View>
-            )
+            );
           })}
         </View>
       </Card>
@@ -102,26 +132,55 @@ const styles = StyleSheet.create({
   header: { marginBottom: theme.spacing.lg },
   title: { fontSize: theme.typography.fontSize.xl, fontWeight: 'bold', color: theme.colors.textMain },
   subtitle: { color: theme.colors.textLight, marginTop: 4 },
-  
   filterRow: { flexDirection: 'row', gap: theme.spacing.sm, marginBottom: theme.spacing.md },
-  filterChip: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: '#E2E8F0' },
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
   filterChipActive: { backgroundColor: theme.colors.primary },
   filterText: { color: theme.colors.textMuted, fontWeight: '500' },
   filterTextActive: { color: '#FFF' },
-
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.colors.textMain, marginBottom: 12, marginTop: 8 },
-  
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.textMain,
+    marginBottom: 12,
+    marginTop: 8,
+  },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   statBox: { alignItems: 'center', flex: 1 },
   statBig: { fontSize: 28, fontWeight: 'bold', color: theme.colors.textMain },
   statLabel: { fontSize: 12, color: theme.colors.textMuted, marginTop: 4 },
-
-  segmentedBar: { height: 16, borderRadius: 8, flexDirection: 'row', overflow: 'hidden', marginBottom: 8 },
+  segmentedBar: {
+    height: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
   segment: { height: '100%' },
-
-  chartContainer: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 160, paddingTop: 20 },
+  chartContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 160,
+    paddingTop: 20,
+  },
   barColumn: { alignItems: 'center', height: '100%', flex: 1 },
-  barTrack: { flex: 1, width: 24, backgroundColor: theme.colors.background, borderRadius: 12, justifyContent: 'flex-end', alignItems: 'center', overflow: 'hidden', position: 'relative' },
+  barTrack: {
+    flex: 1,
+    width: 24,
+    backgroundColor: theme.colors.background,
+    borderRadius: 12,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
   barFill: { width: '100%', borderRadius: 12, alignSelf: 'flex-end' },
-  dayLabel: { fontSize: 12, color: theme.colors.textMuted, marginTop: 8 }
+  dayLabel: { fontSize: 12, color: theme.colors.textMuted, marginTop: 8 },
 });

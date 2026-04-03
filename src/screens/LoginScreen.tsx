@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { Button } from '../components/Button';
 import { theme } from '../styles/theme';
 import { Lock, Mail, HeartPulse } from 'lucide-react-native';
 
-export const LoginScreen = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+interface LoginScreenProps {
+  onLogin: () => void;
+}
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
 
   return (
     <View style={styles.background}>
-      <KeyboardAvoidingView 
-        style={styles.container} 
+      <KeyboardAvoidingView
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.logoContainer}>
@@ -23,13 +27,15 @@ export const LoginScreen = ({ onLogin }) => {
         <View style={styles.formCard}>
           <View style={styles.header}>
             <Text style={styles.title}>Chào mừng</Text>
-            <Text style={styles.subtitle}>Đăng nhập để quản lý lịch uống thuốc của bạn hiệu quả hơn</Text>
+            <Text style={styles.subtitle}>
+              Đăng nhập để quản lý lịch uống thuốc của bạn hiệu quả hơn
+            </Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <Mail color={theme.colors.textLight} size={20} style={styles.icon} />
-              <TextInput 
+              <TextInput
                 style={styles.input}
                 placeholder="Email hoặc Số điện thoại"
                 placeholderTextColor={theme.colors.textLight}
@@ -41,7 +47,7 @@ export const LoginScreen = ({ onLogin }) => {
 
             <View style={styles.inputContainer}>
               <Lock color={theme.colors.textLight} size={20} style={styles.icon} />
-              <TextInput 
+              <TextInput
                 style={styles.input}
                 placeholder="Mật khẩu"
                 placeholderTextColor={theme.colors.textLight}
@@ -154,5 +160,5 @@ const styles = StyleSheet.create({
   },
   loginBtn: {
     marginTop: theme.spacing.sm,
-  }
+  },
 });

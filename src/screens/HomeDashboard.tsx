@@ -2,11 +2,16 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { Pill, CheckCircle2, Clock, XCircle } from 'lucide-react-native';
+import { Pill, CheckCircle2, Clock } from 'lucide-react-native';
 import { theme } from '../styles/theme';
+import { Medication } from '../types';
 
-export const HomeDashboard = ({ onTakeMed }) => {
-  const schedule = [
+interface HomeDashboardProps {
+  onTakeMed: (med: Medication) => void;
+}
+
+export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onTakeMed }) => {
+  const schedule: Medication[] = [
     {
       id: 1,
       name: 'Metformin (500mg)',
@@ -30,7 +35,7 @@ export const HomeDashboard = ({ onTakeMed }) => {
       time: '20:00',
       type: 'Tối',
       status: 'pending',
-    }
+    },
   ];
 
   return (
@@ -42,7 +47,9 @@ export const HomeDashboard = ({ onTakeMed }) => {
       <Card style={styles.progressWidget}>
         <View style={styles.progressText}>
           <Text style={styles.progressTitle}>Tiến độ uống thuốc</Text>
-          <Text style={styles.progressSubtitle}>Bạn đã uống 1/3 liều hôm nay. Cố gắng phát huy nhé!</Text>
+          <Text style={styles.progressSubtitle}>
+            Bạn đã uống 1/3 liều hôm nay. Cố gắng phát huy nhé!
+          </Text>
         </View>
         <View style={styles.progressCircle}>
           <Text style={styles.progressPercentage}>33%</Text>
@@ -54,23 +61,32 @@ export const HomeDashboard = ({ onTakeMed }) => {
       {schedule.map((med) => (
         <Card key={med.id} style={styles.medCard}>
           <View style={styles.medHeader}>
-            <View style={[
-              styles.iconBox,
-              med.status === 'taken' && { backgroundColor: theme.colors.primaryLight },
-              med.status === 'pending' && { backgroundColor: theme.colors.warning },
-              med.status === 'missed' && { backgroundColor: theme.colors.dangerLight }
-            ]}>
+            <View
+              style={[
+                styles.iconBox,
+                med.status === 'taken' && { backgroundColor: theme.colors.primaryLight },
+                med.status === 'pending' && { backgroundColor: theme.colors.warning },
+                med.status === 'missed' && { backgroundColor: theme.colors.dangerLight },
+              ]}
+            >
               <Pill
                 size={24}
                 color={
-                  med.status === 'taken' ? theme.colors.primary :
-                    med.status === 'pending' ? '#FFF' : theme.colors.danger
+                  med.status === 'taken'
+                    ? theme.colors.primary
+                    : med.status === 'pending'
+                    ? '#FFF'
+                    : theme.colors.danger
                 }
               />
             </View>
             <View style={styles.medInfo}>
-              <Text style={styles.medTime}>{med.time} • {med.type}</Text>
-              <Text style={styles.medName} numberOfLines={1}>{med.name}</Text>
+              <Text style={styles.medTime}>
+                {med.time} • {med.type}
+              </Text>
+              <Text style={styles.medName} numberOfLines={1}>
+                {med.name}
+              </Text>
               <Text style={styles.medInstruction}>{med.instruction}</Text>
             </View>
             <View style={styles.medStatusBox}>
@@ -91,10 +107,7 @@ export const HomeDashboard = ({ onTakeMed }) => {
 
           {med.status === 'pending' && (
             <View style={styles.medActions}>
-              <Button
-                variant="primary"
-                onPress={() => onTakeMed(med)}
-              >
+              <Button variant="primary" onPress={() => onTakeMed(med)}>
                 Uống ngay
               </Button>
             </View>
@@ -112,7 +125,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: theme.spacing.md,
-    paddingBottom: 100, // space for bottom nav
+    paddingBottom: 100,
   },
   header: {
     marginBottom: theme.spacing.lg,
@@ -196,6 +209,10 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textMuted,
   },
+  medStatusBox: {
+    alignSelf: 'flex-start',
+    marginLeft: theme.spacing.xs,
+  },
   statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -210,5 +227,5 @@ const styles = StyleSheet.create({
   },
   medActions: {
     marginTop: theme.spacing.md,
-  }
+  },
 });

@@ -1,17 +1,30 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View, ViewStyle } from 'react-native';
 import { theme } from '../styles/theme';
 
-export const Button = ({ 
-  children, 
-  variant = 'primary', // primary, secondary, danger
-  style, 
-  onPress, 
-  icon 
+type ButtonVariant = 'primary' | 'secondary' | 'danger';
+
+interface ButtonProps {
+  children: React.ReactNode;
+  variant?: ButtonVariant;
+  style?: ViewStyle | ViewStyle[];
+  onPress?: () => void;
+  icon?: React.ReactNode;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+}
+
+export const Button: React.FC<ButtonProps> = ({
+  children,
+  variant = 'primary',
+  style,
+  onPress,
+  icon,
+  accessibilityLabel,
+  accessibilityHint,
 }) => {
-  
-  const getVariantStyles = () => {
-    switch(variant) {
+  const getVariantStyles = (): [object, object] => {
+    switch (variant) {
       case 'secondary':
         return [styles.btnSecondary, styles.btnSecondaryText];
       case 'danger':
@@ -25,15 +38,20 @@ export const Button = ({
   const [bgStyle, textStyle] = getVariantStyles();
 
   return (
-    <TouchableOpacity 
-      style={[styles.btn, bgStyle, style]} 
+    <TouchableOpacity
+      style={[styles.btn, bgStyle, style]}
       onPress={onPress}
       activeOpacity={0.8}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityRole="button"
     >
       {icon && <View style={styles.iconStyle}>{icon}</View>}
       {typeof children === 'string' ? (
         <Text style={[styles.btnText, textStyle]}>{children}</Text>
-      ) : children}
+      ) : (
+        children
+      )}
     </TouchableOpacity>
   );
 };
@@ -79,5 +97,5 @@ const styles = StyleSheet.create({
   },
   btnDangerText: {
     color: '#FFF',
-  }
+  },
 });

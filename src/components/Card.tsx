@@ -1,13 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { theme } from '../styles/theme';
 
-export const Card = ({ children, style, onPress }) => {
+interface CardProps {
+  children: React.ReactNode;
+  style?: ViewStyle | ViewStyle[];
+  onPress?: () => void;
+}
+
+export const Card: React.FC<CardProps> = ({ children, style, onPress }) => {
   const CardComponent = onPress ? TouchableOpacity : View;
-  
+
   return (
-    <CardComponent 
-      style={[styles.card, style]} 
+    <CardComponent
+      style={[styles.card, style]}
       onPress={onPress}
       activeOpacity={0.9}
     >
@@ -26,8 +32,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
-    elevation: 2, // For Android
+    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(232, 245, 243, 0.5)',
-  }
+  },
 });

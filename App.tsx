@@ -11,18 +11,19 @@ import { Profile } from './src/screens/Profile';
 import { Notifications } from './src/screens/Notifications';
 import { MedicationReminder } from './src/screens/MedicationReminder';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { Medication, TabId } from './src/types';
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState('home');
-  const [activeMedication, setActiveMedication] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<TabId>('home');
+  const [activeMedication, setActiveMedication] = useState<Medication | null>(null);
+  const [showNotifications, setShowNotifications] = useState<boolean>(false);
 
   if (!isLoggedIn) {
     return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
   }
 
-  const renderScreen = () => {
+  const renderScreen = (): React.ReactNode => {
     if (showNotifications) return <Notifications />;
 
     switch (activeTab) {
@@ -44,29 +45,27 @@ export default function App() {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      <TopBar 
-        userName="Anh Tuấn" 
-        hasNotification={true} 
-        onNotificationClick={() => setShowNotifications(!showNotifications)} 
+      <TopBar
+        userName="Anh Tuấn"
+        hasNotification={true}
+        onNotificationClick={() => setShowNotifications(!showNotifications)}
       />
-      
-      <View style={styles.content}>
-        {renderScreen()}
-      </View>
 
-      <BottomNav 
-        activeTab={activeTab} 
+      <View style={styles.content}>{renderScreen()}</View>
+
+      <BottomNav
+        activeTab={activeTab}
         onTabChange={(tab) => {
           setActiveTab(tab);
           setShowNotifications(false);
-        }} 
+        }}
       />
 
       {activeMedication && (
-        <MedicationReminder 
-          medication={activeMedication} 
-          onClose={() => setActiveMedication(null)} 
-          onConfirm={() => setActiveMedication(null)} 
+        <MedicationReminder
+          medication={activeMedication}
+          onClose={() => setActiveMedication(null)}
+          onConfirm={() => setActiveMedication(null)}
         />
       )}
     </View>
@@ -80,5 +79,5 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  }
+  },
 });

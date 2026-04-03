@@ -6,29 +6,33 @@ import { Camera, CheckCircle2, RefreshCcw } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
-export const ScanPrescription = () => {
-  const [step, setStep] = useState('camera'); // 'camera' | 'preview' | 'form'
-  const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef(null);
-  const [photoUri, setPhotoUri] = useState(null);
-  const [scannedData, setScannedData] = useState(null);
+type ScanStep = 'camera' | 'preview' | 'form';
 
-  const handleBarcodeScanned = ({ type, data }) => {
+export const ScanPrescription: React.FC = () => {
+  const [step, setStep] = useState<ScanStep>('camera');
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [scannedData, setScannedData] = useState<string | null>(null);
+
+  const handleBarcodeScanned = ({ data }: { type: string; data: string }) => {
     if (step === 'camera') {
       setScannedData(data);
-      setStep('form'); // Nhảy ngay sang form kết quả
+      setStep('form');
     }
   };
 
-  const handleCapture = async () => {
+  const handleCapture = async (): Promise<void> => {
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
-      setPhotoUri(photo.uri);
-      setStep('preview');
+      if (photo?.uri) {
+        setPhotoUri(photo.uri);
+        setStep('preview');
+      }
     }
   };
 
-  const handleApprove = () => setStep('form');
+  const handleApprove = (): void => setStep('form');
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -37,10 +41,19 @@ export const ScanPrescription = () => {
   if (!permission.granted) {
     return (
       <View style={[styles.container, { justifyContent: 'center', padding: theme.spacing.xl }]}>
-        <Text style={{ textAlign: 'center', marginBottom: theme.spacing.lg, fontSize: 16, color: theme.colors.textMain }}>
+        <Text
+          style={{
+            textAlign: 'center',
+            marginBottom: theme.spacing.lg,
+            fontSize: 16,
+            color: theme.colors.textMain,
+          }}
+        >
           Ứng dụng cần quyền truy cập camera để chụp ảnh đơn thuốc.
         </Text>
-        <Button variant="primary" onPress={requestPermission}>Cấp quyền Camera</Button>
+        <Button variant="primary" onPress={requestPermission}>
+          Cấp quyền Camera
+        </Button>
       </View>
     );
   }
@@ -60,11 +73,10 @@ export const ScanPrescription = () => {
               facing="back"
               ref={cameraRef}
               barcodeScannerSettings={{
-                barcodeTypes: ["qr", "ean13", "ean8", "pdf417", "code39", "code128", "upc_a"],
+                barcodeTypes: ['qr', 'ean13', 'ean8', 'pdf417', 'code39', 'code128', 'upc_a'],
               }}
               onBarcodeScanned={step === 'camera' ? handleBarcodeScanned : undefined}
             >
-              {/* Viewfinder brackets */}
               <View style={[styles.bracket, styles.tr]} />
               <View style={[styles.bracket, styles.tl]} />
               <View style={[styles.bracket, styles.br]} />
@@ -90,14 +102,37 @@ export const ScanPrescription = () => {
             {photoUri ? (
               <Image source={{ uri: photoUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
             ) : (
-              <View style={{ width: '100%', height: '100%', backgroundColor: '#CBD5E1', borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#CBD5E1',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 <Text style={{ color: theme.colors.textMuted }}>[ Không có ảnh ]</Text>
               </View>
             )}
           </View>
           <View style={{ flexDirection: 'row', marginTop: theme.spacing.lg, gap: 12 }}>
-            <Button variant="secondary" onPress={() => setStep('camera')} icon={<RefreshCcw size={20} color={theme.colors.primary} />} style={{ flex: 1 }}>Chụp lại</Button>
-            <Button variant="primary" onPress={handleApprove} icon={<CheckCircle2 size={20} color="#FFF" />} style={{ flex: 1 }}>Xử lý OCR</Button>
+            <Button
+              variant="secondary"
+              onPress={() => setStep('camera')}
+              icon={<RefreshCcw size={20} color={theme.colors.primary} />}
+              style={{ flex: 1 }}
+            >
+              Chụp lại
+            </Button>
+            <Button
+              variant="primary"
+              onPress={handleApprove}
+              icon={<CheckCircle2 size={20} color="#FFF" />}
+              style={{ flex: 1 }}
+            >
+              Xử lý OCR
+            </Button>
           </View>
         </View>
       )}
@@ -127,8 +162,12 @@ export const ScanPrescription = () => {
           </Card>
 
           <View style={styles.actionRow}>
-            <Button variant="secondary" onPress={() => setStep('camera')} style={{ flex: 1, marginRight: 8 }}>Hủy</Button>
-            <Button variant="primary" style={{ flex: 2 }}>Thêm vào lịch</Button>
+            <Button variant="secondary" onPress={() => setStep('camera')} style={{ flex: 1, marginRight: 8 }}>
+              Hủy
+            </Button>
+            <Button variant="primary" style={{ flex: 2 }}>
+              Thêm vào lịch
+            </Button>
           </View>
         </View>
       )}
@@ -142,7 +181,6 @@ const styles = StyleSheet.create({
   header: { marginBottom: theme.spacing.lg },
   title: { fontSize: theme.typography.fontSize.xl, fontWeight: 'bold', color: theme.colors.textMain },
   subtitle: { color: theme.colors.textLight, marginTop: 4 },
-
   viewfinderContainer: { flex: 1 },
   viewfinder: {
     height: 400,
@@ -158,15 +196,23 @@ const styles = StyleSheet.create({
   bl: { bottom: 40, left: 40, borderBottomWidth: 4, borderLeftWidth: 4 },
   br: { bottom: 40, right: 40, borderBottomWidth: 4, borderRightWidth: 4 },
   viewfinderText: { color: 'rgba(255,255,255,0.7)', fontSize: 16 },
-
   formContainer: { flex: 1 },
-  successHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: theme.spacing.md },
+  successHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: theme.spacing.md,
+  },
   successText: { fontSize: 18, fontWeight: 'bold', color: theme.colors.success },
   inputGroup: { marginBottom: theme.spacing.md },
   label: { fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 },
   input: {
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: theme.radius.sm,
-    padding: 12, fontSize: 16, color: theme.colors.textMain
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: theme.radius.sm,
+    padding: 12,
+    fontSize: 16,
+    color: theme.colors.textMain,
   },
-  actionRow: { flexDirection: 'row', marginTop: theme.spacing.sm }
+  actionRow: { flexDirection: 'row', marginTop: theme.spacing.sm },
 });

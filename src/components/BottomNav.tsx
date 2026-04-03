@@ -1,10 +1,22 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Home, ScanLine, BarChart2, Clock, User } from 'lucide-react-native';
+import { Home, ScanLine, BarChart2, Clock, User, LucideIcon } from 'lucide-react-native';
 import { theme } from '../styles/theme';
+import { TabId } from '../types';
 
-export const BottomNav = ({ activeTab, onTabChange }) => {
-  const tabs = [
+interface Tab {
+  id: TabId;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface BottomNavProps {
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
+}
+
+export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
+  const tabs: Tab[] = [
     { id: 'home', label: 'Trang chủ', icon: Home },
     { id: 'analytics', label: 'Báo cáo', icon: BarChart2 },
     { id: 'scan', label: 'Quét', icon: ScanLine },
@@ -20,13 +32,15 @@ export const BottomNav = ({ activeTab, onTabChange }) => {
         const color = isActive ? theme.colors.primary : theme.colors.textLight;
 
         return (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={tab.id}
             style={styles.navItem}
             onPress={() => onTabChange(tab.id)}
             activeOpacity={0.7}
+            accessibilityLabel={tab.label}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
           >
-            {/* Make the Scan button stand out exactly like a primary FAB */}
             {tab.id === 'scan' ? (
               <View style={styles.scanBtn}>
                 <Icon size={28} color="#FFF" strokeWidth={2.5} />
@@ -34,7 +48,17 @@ export const BottomNav = ({ activeTab, onTabChange }) => {
             ) : (
               <Icon size={24} color={color} strokeWidth={isActive ? 2.5 : 2} />
             )}
-            <Text style={[styles.navText, { color: tab.id === 'scan' ? theme.colors.primary : color, fontWeight: isActive ? 'bold' : '500' }]}>{tab.label}</Text>
+            <Text
+              style={[
+                styles.navText,
+                {
+                  color: tab.id === 'scan' ? theme.colors.primary : color,
+                  fontWeight: isActive ? 'bold' : '500',
+                },
+              ]}
+            >
+              {tab.label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -82,6 +106,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
-    transform: [{ translateY: -10 }]
-  }
+    transform: [{ translateY: -10 }],
+  },
 });
