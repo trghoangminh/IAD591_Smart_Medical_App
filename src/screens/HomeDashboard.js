@@ -50,7 +50,7 @@ export const HomeDashboard = ({ onTakeMed }) => {
       </Card>
 
       <Text style={styles.sectionTitle}>Lịch uống hôm nay</Text>
-      
+
       {schedule.map((med) => (
         <Card key={med.id} style={styles.medCard}>
           <View style={styles.medHeader}>
@@ -60,12 +60,12 @@ export const HomeDashboard = ({ onTakeMed }) => {
               med.status === 'pending' && { backgroundColor: theme.colors.warning },
               med.status === 'missed' && { backgroundColor: theme.colors.dangerLight }
             ]}>
-              <Pill 
-                size={24} 
+              <Pill
+                size={24}
                 color={
-                  med.status === 'taken' ? theme.colors.primary : 
-                  med.status === 'pending' ? '#FFF' : theme.colors.danger
-                } 
+                  med.status === 'taken' ? theme.colors.primary :
+                    med.status === 'pending' ? '#FFF' : theme.colors.danger
+                }
               />
             </View>
             <View style={styles.medInfo}>
@@ -88,11 +88,11 @@ export const HomeDashboard = ({ onTakeMed }) => {
               )}
             </View>
           </View>
-          
+
           {med.status === 'pending' && (
             <View style={styles.medActions}>
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 onPress={() => onTakeMed(med)}
               >
                 Uống ngay
