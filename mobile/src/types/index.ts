@@ -41,6 +41,42 @@ export interface WeeklyData {
   percentage: number;
 }
 
+export type AnalyticsPeriod = 'week' | 'month';
+export type TrendDirection = 'improving' | 'stable' | 'declining';
+
+export interface AnalyticsOverview {
+  patient_id: string;
+  period: AnalyticsPeriod;
+  total_doses: number;
+  taken_doses: number;
+  missed_doses: number;
+  delayed_doses: number;
+  adherence_rate: number;
+  average_delay_minutes: number;
+  current_risk_score: number;
+  trend_direction: TrendDirection;
+}
+
+export interface AnalyticsChartPoint {
+  label: string;
+  adherence_rate: number;
+  taken_doses: number;
+  missed_doses: number;
+}
+
+export interface TopMissedMedication {
+  medication_name: string;
+  missed_doses: number;
+  adherence_rate: number;
+}
+
+export interface AnalyticsChartsResponse {
+  patient_id: string;
+  period: AnalyticsPeriod;
+  series: AnalyticsChartPoint[];
+  top_missed_medications: TopMissedMedication[];
+}
+
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
 export type TabId = 'home' | 'analytics' | 'scan' | 'history' | 'profile';

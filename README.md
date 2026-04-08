@@ -1,45 +1,61 @@
-# Smart Medication Management Mobile App
+# Smart Medication Management App
 
-Đây là ứng dụng di động cho Hệ thống Quản lý Thuốc Thông minh, được xây dựng bằng **React Native** và **Expo**.
+Repo hiện gồm 2 phần:
 
-## Yêu cầu môi trường (Prerequisites)
+- `mobile/`: Ứng dụng React Native/Expo cho bệnh nhân.
+- `ai/`: Module AI bằng FastAPI + scikit-learn để dự đoán nguy cơ không tuân thủ uống thuốc và cung cấp dữ liệu analytics cho bác sỹ.
 
-1. Cài đặt [Node.js](https://nodejs.org/) (khuyên dùng bản LTS mới nhất).
-2. Cài đặt App **Expo Go** trên điện thoại di động (có sẵn trên App Store hoặc Google Play).
+## Yêu cầu môi trường
 
-## Hướng dẫn cài đặt (Setup/Installation)
+1. Cài [Node.js](https://nodejs.org/) bản LTS để chạy mobile app.
+2. Cài Python 3.11+ để chạy AI service.
+3. Cài Expo Go nếu muốn mở app trên điện thoại thật.
 
-1. Mở Terminal và di chuyển vào thư mục dự án:
-   ```bash
-   cd Mobile-App
-   ```
+## Chạy AI Service
 
-2. Cài đặt các gói thư viện cần thiết:
-   ```bash
-   npm install
-   ```
-   *(Dự án đang sử dụng `lucide-react-native` cho icon và bộ lõi của Expo).*
-
-## Hướng dẫn chạy ứng dụng (Run / Development)
-
-Để khởi động server và trải nghiệm App, chạy lệnh sau:
 ```bash
-npx expo start
+cd ai
+pip install -e '.[dev]'
+PYTHONPATH=src uvicorn smart_medical_ai.main:app --reload
 ```
-*hoặc*
+
+API chính:
+
+- `GET /api/analytics/overview`
+- `GET /api/analytics/charts`
+- `POST /api/analytics/predict`
+
+Train model thủ công:
+
 ```bash
+cd ai
+PYTHONPATH=src python -m smart_medical_ai.ml.train
+```
+
+Đặt dataset Kaggle vào `ai/data/raw/`. Nếu chưa có dataset thật, service sẽ tự dùng dữ liệu synthetic bootstrap để chạy demo.
+
+## Chạy Mobile App
+
+```bash
+cd mobile
+npm install
 npm start
 ```
 
-### Các tùy chọn sau khi chạy lệnh:
-- **Xem trên điện thoại thật (Khuyên dùng):** Bật ứng dụng Expo Go trên Android hoặc ứng dụng Camera trên iOS để quét mã QR xuất hiện trên Terminal.
-- **Xem trên Máy ảo iOS (Simulator):** Nhấn phím `i` trong Terminal (Yêu cầu Macbook đã cài Xcode).
-- **Xem trên Máy ảo Android (Emulator):** Nhấn phím `a` trong Terminal (Yêu cầu đã cài đặt Android Studio).
-- **Xem trên nền Web:** Nhấn phím `w` trong Terminal.
+Màn hình `Analytics` đã gọi API thật. Nếu muốn mobile trỏ tới backend khác, đặt biến môi trường:
+
+```bash
+EXPO_PUBLIC_AI_API_URL=http://127.0.0.1:8000 npm start
+```
+
+Khi API chưa chạy, app tự fallback sang dữ liệu demo để giao diện vẫn hoạt động.
 
 ## Cấu trúc thư mục
 
-- `src/components/`: Chứa các UI thành phần dùng chung (Button, Card, TopBar, BottomNav).
-- `src/screens/`: Chứa mã nguồn của 5 màn hình chính (HomeDashboard, Analytics, ScanPrescription, History, Profile, MedicationReminder).
-- `src/styles/`: Theme chung quy định màu sắc, font chữ và kích cỡ của app (`theme.js`).
-- `App.js`: File gốc điều hướng và quản lý trạng thái các màn hình.
+- `mobile/src/components/`: UI dùng chung.
+- `mobile/src/screens/`: Các màn hình chính của app React Native.
+- `mobile/src/services/analytics.ts`: Client gọi AI API.
+- `ai/src/smart_medical_ai/main.py`: FastAPI app entrypoint.
+- `ai/src/smart_medical_ai/ml/`: Feature engineering, train script, model artifacts.
+- `ai/src/smart_medical_ai/services/`: Logic dự đoán và tổng hợp analytics.
+- `ai/tests/unit/`: Unit tests cho predictor và analytics.

@@ -1,0 +1,7 @@
+__pycache__/
+.pytest_cache/
+data/*.db
+data/raw/*
+!data/raw/README.md
+src/smart_medical_ai/ml/saved/*
+!src/smart_medical_ai/ml/saved/README.md
