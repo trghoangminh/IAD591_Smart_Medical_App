@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Text, Modal, Platform } from 'react-native';
 import { TopBar } from './src/components/TopBar';
 import { BottomNav } from './src/components/BottomNav';
 import { HomeDashboard } from './src/screens/HomeDashboard';
@@ -12,16 +12,27 @@ import { Notifications } from './src/screens/Notifications';
 import { MedicationReminder } from './src/screens/MedicationReminder';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { Medication, TabId } from './src/types';
+import { User } from './src/services/api';
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [activeMedication, setActiveMedication] = useState<Medication | null>(null);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
 
-  if (!isLoggedIn) {
-    return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
+  if (!currentUser) {
+    return <LoginScreen onLogin={(user) => setCurrentUser(user)} />;
   }
+
+  const [toastMessage, setToastMessage] = useState<string>('');
+
+  const handleLogout = () => {
+    setToastMessage('Bạn đã đăng xuất thành công!');
+    setTimeout(() => {
+      setToastMessage('');
+      setCurrentUser(null);
+    }, 1500);
+  };
 
   const renderScreen = (): React.ReactNode => {
     if (showNotifications) return <Notifications />;
@@ -36,7 +47,7 @@ export default function App() {
       case 'history':
         return <History />;
       case 'profile':
-        return <Profile />;
+        return <Profile onLogout={handleLogout} user={currentUser} />;
       default:
         return <HomeDashboard onTakeMed={(med) => setActiveMedication(med)} />;
     }
@@ -46,7 +57,7 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="dark" />
       <TopBar
-        userName="Anh Tuấn"
+        userName={currentUser.name}
         hasNotification={true}
         onNotificationClick={() => setShowNotifications(!showNotifications)}
       />
@@ -68,6 +79,17 @@ export default function App() {
           onConfirm={() => setActiveMedication(null)}
         />
       )}
+
+      {/* Global Logout Toast */}
+      {!!toastMessage && (
+        <Modal transparent={true} visible={!!toastMessage} animationType="fade">
+          <View style={styles.toastOverlay}>
+            <View style={styles.toastContainer}>
+              <Text style={styles.toastText}>{toastMessage}</Text>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -80,4 +102,27 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  toastOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 120 : 80,
+  },
+  toastContainer: {
+    backgroundColor: '#1E293B',
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  toastText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center'
+  }
 });

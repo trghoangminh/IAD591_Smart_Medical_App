@@ -2,10 +2,16 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { User, Phone, LogOut, Bell, Moon } from 'lucide-react-native';
+import { User as UserIcon, Phone, LogOut, Bell, Moon } from 'lucide-react-native';
 import { theme } from '../styles/theme';
+import { User } from '../services/api';
 
-export const Profile: React.FC = () => {
+interface ProfileProps {
+  onLogout: () => void;
+  user: User;
+}
+
+export const Profile: React.FC<ProfileProps> = ({ onLogout, user }) => {
   const [notifications, setNotifications] = useState<boolean>(true);
   const [darkMode, setDarkMode] = useState<boolean>(false);
 
@@ -17,10 +23,13 @@ export const Profile: React.FC = () => {
 
       <Card style={styles.profileCard}>
         <View style={styles.avatar}>
-          <User size={36} color={theme.colors.primary} />
+          <UserIcon size={36} color={theme.colors.primary} />
         </View>
-        <Text style={styles.userName}>Eleanor Shellstrop</Text>
-        <Text style={styles.userEmail}>eleanor@example.com</Text>
+        <Text style={styles.userName}>{user.name}</Text>
+        <Text style={styles.userEmail}>{user.email || user.phone || 'Chưa có thông tin LL'}</Text>
+        <Text style={{color: theme.colors.textMuted, fontSize: 13, marginTop: 4}}>
+          Vai trò: {user.role === 'patient' ? 'Bệnh nhân' : (user.role === 'doctor' ? 'Bác sĩ' : 'Người nhà')}
+        </Text>
       </Card>
 
       <Text style={styles.sectionTitle}>Liên hệ y tế</Text>
@@ -79,6 +88,7 @@ export const Profile: React.FC = () => {
         variant="danger"
         icon={<LogOut size={20} color="#FFF" />}
         style={{ marginTop: theme.spacing.md }}
+        onPress={onLogout}
       >
         Đăng xuất
       </Button>

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Generator, List, Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
@@ -99,6 +100,15 @@ Base.metadata.create_all(bind=engine)
 # FASTAPI APP
 # =========================
 app = FastAPI(title="Smart Medicine Backend")
+
+# Cho phép Web App và thiết bị ngoại vi gọi API mà không bị lỗi CORS (Blocked by CORS policy)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # =========================
