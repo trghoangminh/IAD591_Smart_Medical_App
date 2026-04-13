@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Generator, List, Literal
+from typing import Generator, List, Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -28,9 +28,14 @@ class UserDB(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     role = Column(String, nullable=False)  # patient / doctor / family
+    password = Column(String, nullable=False)
+    phone = Column(String, nullable=True, unique=True)
+    email = Column(String, nullable=True, unique=True)
+    caretaker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     prescriptions = relationship("PrescriptionDB", back_populates="user")
     logs = relationship("MedicationLogDB", back_populates="user")
+    notifications = relationship("NotificationDB", back_populates="user")
 
 
 class PrescriptionDB(Base):
@@ -53,7 +58,7 @@ class ScheduleDB(Base):
     id = Column(Integer, primary_key=True, index=True)
     prescription_id = Column(Integer, ForeignKey("prescriptions.id"), nullable=False)
     time = Column(String, nullable=False)  # ví dụ: "08:00"
-    status = Column(String, default="pending", nullable=False)  # pending / taken
+    status = Column(String, default="pending", nullable=False)  # pending / taken / missed
 
     prescription = relationship("PrescriptionDB", back_populates="schedules")
     logs = relationship("MedicationLogDB", back_populates="schedule")
@@ -72,6 +77,18 @@ class MedicationLogDB(Base):
 
     user = relationship("UserDB", back_populates="logs")
     schedule = relationship("ScheduleDB", back_populates="logs")
+
+
+class NotificationDB(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    message = Column(String, nullable=False)
+    is_read = Column(Integer, default=0)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("UserDB", back_populates="notifications")
 
 
 # Tạo database + bảng
@@ -98,20 +115,25 @@ def get_db() -> Generator[Session, None, None]:
 # =========================
 # Pydantic SCHEMAS
 # =========================
-class LoginRequest(BaseModel):
-    id: int = Field(..., example=1)
+class RegisterRequest(BaseModel):
     name: str = Field(..., example="Nguyen Van A")
     role: Literal["patient", "doctor", "family"] = "patient"
+    password: str = Field(..., example="123456")
+    phone: Optional[str] = Field(default=None, example="0987654321")
+    email: Optional[str] = Field(default=None, example="abc@example.com")
+    caretaker_id: Optional[int] = Field(default=None, example=2)
 
+class LoginRequest(BaseModel):
+    username: str = Field(..., description="Phone number or Email", example="0987654321")
+    password: str = Field(..., example="123456")
 
 class PrescriptionCreate(BaseModel):
     user_id: int = Field(..., example=1)
     medicine: str = Field(..., example="Paracetamol")
     dosage: int = Field(..., example=2)
     times: List[str] = Field(..., example=["08:00", "20:00"])
-    start_date: str | None = Field(default=None, example="2026-04-12")
-    end_date: str | None = Field(default=None, example="2026-04-20")
-
+    start_date: Optional[str] = Field(default=None, example="2026-04-12")
+    end_date: Optional[str] = Field(default=None, example="2026-04-20")
 
 class ConfirmRequest(BaseModel):
     user_id: int = Field(..., example=1)
@@ -120,40 +142,56 @@ class ConfirmRequest(BaseModel):
 
 
 # =========================
-# API 1: LOGIN
+# API 1: AUTHENTICATION
 # =========================
-@app.post("/api/auth/login")
-def login(user: LoginRequest, db: Session = Depends(get_db)):
-    existing_user = db.query(UserDB).filter(UserDB.id == user.id).first()
+@app.post("/api/auth/register")
+def register(user: RegisterRequest, db: Session = Depends(get_db)):
+    if user.phone:
+        if db.query(UserDB).filter(UserDB.phone == user.phone).first():
+            raise HTTPException(status_code=400, detail="Phone already registered")
+    if user.email:
+        if db.query(UserDB).filter(UserDB.email == user.email).first():
+            raise HTTPException(status_code=400, detail="Email already registered")
 
-    if existing_user:
-        existing_user.name = user.name
-        existing_user.role = user.role
-        db.commit()
-        db.refresh(existing_user)
-        return {
-            "message": "Login success (updated existing user)",
-            "user": {
-                "id": existing_user.id,
-                "name": existing_user.name,
-                "role": existing_user.role,
-            },
-        }
-
-    new_user = UserDB(id=user.id, name=user.name, role=user.role)
+    new_user = UserDB(
+        name=user.name,
+        role=user.role,
+        password=user.password,
+        phone=user.phone,
+        email=user.email,
+        caretaker_id=user.caretaker_id
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
     return {
-        "message": "Login success",
-        "user": {
-            "id": new_user.id,
-            "name": new_user.name,
-            "role": new_user.role,
-        },
+        "message": "Register success",
+        "user_id": new_user.id,
+        "role": new_user.role
     }
 
+@app.post("/api/auth/login")
+def login(req: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(UserDB).filter(
+        ((UserDB.phone == req.username) | (UserDB.email == req.username)) &
+        (UserDB.password == req.password)
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    return {
+        "message": "Login success",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "role": user.role,
+            "phone": user.phone,
+            "email": user.email,
+            "caretaker_id": user.caretaker_id
+        },
+    }
 
 # =========================
 # API 2: CREATE PRESCRIPTION
@@ -249,6 +287,9 @@ def confirm_medicine(payload: ConfirmRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Schedule not found")
 
     schedule, prescription = record
+    
+    if schedule.status == "taken":
+        return {"message": "Already taken", "status": "taken"}
 
     schedule.status = "taken"
 
@@ -273,7 +314,92 @@ def confirm_medicine(payload: ConfirmRequest, db: Session = Depends(get_db)):
 
 
 # =========================
-# API 5: HISTORY
+# API 5: CHECK MISSED SCHEDULES (Cron/Job)
+# =========================
+@app.post("/api/cron/check-missed-schedules")
+def check_missed_schedules(db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    current_time_str = now.strftime("%H:%M") # Giả sử time lưu dưới dạng HH:MM
+    
+    # Tìm các schedule pending
+    schedules = (
+        db.query(ScheduleDB, PrescriptionDB)
+        .join(PrescriptionDB, ScheduleDB.prescription_id == PrescriptionDB.id)
+        .filter(ScheduleDB.status == "pending")
+        .all()
+    )
+
+    missed_count = 0
+    # Logic đơn giản: Nếu thời gian hiện hành lớn hơn scheduled time + 30 phút -> missed
+    # Trong thực tế cần parse cẩn thận nếu nối qua ngày, ở đây làm basic string compare hoặc tính toán phút
+    
+    for schedule, prescription in schedules:
+        try:
+            scheduled_datetime = datetime.strptime(schedule.time, "%H:%M")
+            now_datetime = datetime.strptime(current_time_str, "%H:%M")
+            
+            # Tính số phút chênh lệch. Note: nếu qua ngày thì delta sẽ âm, để an toàn ta bỏ qua hoặc xử lý riêng, 
+            # Giả định xử lý trong cùng 1 ngày
+            diff_minutes = (now_datetime - scheduled_datetime).total_seconds() / 60
+            
+            if diff_minutes > 30: # Nếu trễ trên 30 phút
+                schedule.status = "missed"
+                missed_count += 1
+                
+                # Ghi Log
+                log = MedicationLogDB(
+                    user_id=prescription.user_id,
+                    schedule_id=schedule.id,
+                    medicine=prescription.medicine,
+                    scheduled_time=schedule.time,
+                    status="missed",
+                    timestamp=now,
+                )
+                db.add(log)
+                
+                # Lấy thông tin user bệnh nhân
+                patient = db.query(UserDB).filter(UserDB.id == prescription.user_id).first()
+                if patient:
+                    # Tạo notification cho bệnh nhân
+                    notif_patient = NotificationDB(
+                        user_id=patient.id,
+                        message=f"Bạn đã quên uống {prescription.medicine} theo lịch lúc {schedule.time}."
+                    )
+                    db.add(notif_patient)
+                    
+                    # Nếu có người giám sát (Bác sĩ/Người nhà), tạo thông báo đẩy cho họ
+                    if patient.caretaker_id:
+                        notif_caretaker = NotificationDB(
+                            user_id=patient.caretaker_id,
+                            message=f"Bệnh nhân {patient.name} đã quên xác nhận uống {prescription.medicine} vào lúc {schedule.time}."
+                        )
+                        db.add(notif_caretaker)
+
+        except Exception as e:
+            pass # Lỗi parse time
+
+    db.commit()
+    return {"message": "Checked missed schedules", "missed_updated": missed_count}
+
+
+# =========================
+# API 6: GET NOTIFICATIONS
+# =========================
+@app.get("/api/notifications/{user_id}")
+def get_notifications(user_id: int, db: Session = Depends(get_db)):
+    notifs = db.query(NotificationDB).filter(NotificationDB.user_id == user_id).order_by(NotificationDB.timestamp.desc()).all()
+    return [
+        {
+            "id": n.id,
+            "message": n.message,
+            "is_read": n.is_read,
+            "timestamp": n.timestamp.isoformat()
+        } for n in notifs
+    ]
+
+
+# =========================
+# API 7: HISTORY
 # =========================
 @app.get("/api/history/{user_id}")
 def get_history(user_id: int, db: Session = Depends(get_db)):
@@ -301,7 +427,7 @@ def get_history(user_id: int, db: Session = Depends(get_db)):
 
 
 # =========================
-# API 6: ANALYTICS
+# API 8: ANALYTICS
 # =========================
 @app.get("/api/analytics/{user_id}")
 def analytics(user_id: int, db: Session = Depends(get_db)):
