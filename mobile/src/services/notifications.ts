@@ -1,5 +1,3 @@
-// Gỡ bỏ hoàn toàn expo-notifications để tránh lỗi cấu hình Native của Expo Go Android
-
 export const requestNotificationPermissions = async () => {
   return true;
 };

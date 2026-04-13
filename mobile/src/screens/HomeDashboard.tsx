@@ -50,7 +50,16 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ user, refreshKey, 
         setLoading(false);
       }
     };
+    
+    // 1. Tải lần đầu tiên khi mở trang
     loadSchedule();
+
+    // 2. Tự động soi dối chiếu Data ngầm mỗi 3 giây để làm "Ảo thuật Live Sync Live"
+    const liveSyncTimer = setInterval(() => {
+      loadSchedule();
+    }, 3000);
+
+    return () => clearInterval(liveSyncTimer);
   }, [user, refreshKey]);
 
   // Vòng lặp đếm ngược thời gian thực trên giao diện thay thế cho Push Notification Native
@@ -70,8 +79,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ user, refreshKey, 
         // Tính độ chênh lệch phút
         const diff = medTimeMinutes - currTimeMinutes;
 
-        // Nếu còn <= 3 phút nữa là đến giờ uống, đẩy thông báo NGAY!
-        if (diff >= 0 && diff <= 3 && !notifiedRef.current.has(med.id)) {
+        // Bỏ khung Sớm 5 phút cho khớp với khung Cấp báo SMS của Backend!
+        if (diff >= 0 && diff <= 5 && !notifiedRef.current.has(med.id)) {
           notifiedRef.current.add(med.id);
           if (onScheduleHit) {
             onScheduleHit(

@@ -1,11 +1,19 @@
 from datetime import datetime
 from typing import Generator, List, Literal, Optional
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def send_notification(push_token: str, title: str, body: str):
+    print(f"[ALARM] {title}: {body}")
 
 # =========================
 # DATABASE CONFIG
@@ -33,6 +41,7 @@ class UserDB(Base):
     phone = Column(String, nullable=True, unique=True)
     email = Column(String, nullable=True, unique=True)
     caretaker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    push_token = Column(String, nullable=True) # Cột lưu mã máy điện thoại
 
     prescriptions = relationship("PrescriptionDB", back_populates="user")
     logs = relationship("MedicationLogDB", back_populates="user")
@@ -60,6 +69,8 @@ class ScheduleDB(Base):
     prescription_id = Column(Integer, ForeignKey("prescriptions.id"), nullable=False)
     time = Column(String, nullable=False)  # ví dụ: "08:00"
     status = Column(String, default="pending", nullable=False)  # pending / taken / missed
+    sms_reminder_sent = Column(Integer, default=0)
+    sms_missed_sent = Column(Integer, default=0)
 
     prescription = relationship("PrescriptionDB", back_populates="schedules")
     logs = relationship("MedicationLogDB", back_populates="schedule")
@@ -137,6 +148,10 @@ class LoginRequest(BaseModel):
     username: str = Field(..., description="Phone number or Email", example="0987654321")
     password: str = Field(..., example="123456")
 
+class PushTokenUpdate(BaseModel):
+    user_id: int
+    push_token: str
+
 class PrescriptionCreate(BaseModel):
     user_id: int = Field(..., example=1)
     medicine: str = Field(..., example="Paracetamol")
@@ -199,9 +214,19 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
             "role": user.role,
             "phone": user.phone,
             "email": user.email,
-            "caretaker_id": user.caretaker_id
+            "caretaker_id": user.caretaker_id,
+            "push_token": user.push_token
         },
     }
+
+@app.post("/api/users/push-token")
+def update_push_token(data: PushTokenUpdate, db: Session = Depends(get_db)):
+    u = db.query(UserDB).filter(UserDB.id == data.user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    u.push_token = data.push_token
+    db.commit()
+    return {"status": "success"}
 
 # =========================
 # API 2: CREATE PRESCRIPTION
@@ -327,11 +352,10 @@ def confirm_medicine(payload: ConfirmRequest, db: Session = Depends(get_db)):
 # API 5: CHECK MISSED SCHEDULES (Cron/Job)
 # =========================
 @app.post("/api/cron/check-missed-schedules")
-def check_missed_schedules(db: Session = Depends(get_db)):
-    now = datetime.utcnow()
-    current_time_str = now.strftime("%H:%M") # Giả sử time lưu dưới dạng HH:MM
+def check_missed_schedules(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    now = datetime.now() # Căn chuẩn giờ địa phương hiện tại
+    current_time_str = now.strftime("%H:%M") 
     
-    # Tìm các schedule pending
     schedules = (
         db.query(ScheduleDB, PrescriptionDB)
         .join(PrescriptionDB, ScheduleDB.prescription_id == PrescriptionDB.id)
@@ -340,56 +364,74 @@ def check_missed_schedules(db: Session = Depends(get_db)):
     )
 
     missed_count = 0
-    # Logic đơn giản: Nếu thời gian hiện hành lớn hơn scheduled time + 30 phút -> missed
-    # Trong thực tế cần parse cẩn thận nếu nối qua ngày, ở đây làm basic string compare hoặc tính toán phút
+    reminders_count = 0
     
     for schedule, prescription in schedules:
         try:
             scheduled_datetime = datetime.strptime(schedule.time, "%H:%M")
             now_datetime = datetime.strptime(current_time_str, "%H:%M")
-            
-            # Tính số phút chênh lệch. Note: nếu qua ngày thì delta sẽ âm, để an toàn ta bỏ qua hoặc xử lý riêng, 
-            # Giả định xử lý trong cùng 1 ngày
             diff_minutes = (now_datetime - scheduled_datetime).total_seconds() / 60
             
-            if diff_minutes > 30: # Nếu trễ trên 30 phút
+            patient = db.query(UserDB).filter(UserDB.id == prescription.user_id).first()
+            
+            # 1. NHẮC TRƯỚC GIỜ (Dành cho Demo): Sớm hơn 5 phút so với giờ uống
+            if -5 <= diff_minutes <= 0:
+                if schedule.sms_reminder_sent == 0:
+                    if patient and patient.push_token:
+                        msg = f"[SmartMed] Sap den gio uong thuoc {prescription.medicine} luc {schedule.time}. Vui long chuan bi nuoc!"
+                        background_tasks.add_task(send_notification, patient.push_token, "Đến giờ uống thuốc", msg)
+                    schedule.sms_reminder_sent = 1
+                    reminders_count += 1
+            
+            # 2. KHẨN CẤP QUÁ GIỜ (Dành cho Demo): Chỉ cần trễ qua 2 phút -> Ghi án phạt Missed
+            if diff_minutes > 2: 
                 schedule.status = "missed"
                 missed_count += 1
                 
-                # Ghi Log
                 log = MedicationLogDB(
                     user_id=prescription.user_id,
                     schedule_id=schedule.id,
                     medicine=prescription.medicine,
                     scheduled_time=schedule.time,
                     status="missed",
-                    timestamp=now,
+                    timestamp=datetime.utcnow(),
                 )
                 db.add(log)
                 
-                # Lấy thông tin user bệnh nhân
-                patient = db.query(UserDB).filter(UserDB.id == prescription.user_id).first()
                 if patient:
-                    # Tạo notification cho bệnh nhân
+                    # Gửi App Push ảo cho bệnh nhân
                     notif_patient = NotificationDB(
                         user_id=patient.id,
                         message=f"Bạn đã quên uống {prescription.medicine} theo lịch lúc {schedule.time}."
                     )
                     db.add(notif_patient)
                     
-                    # Nếu có người giám sát (Bác sĩ/Người nhà), tạo thông báo đẩy cho họ
+                    # Truy lùng Bác Sĩ / Người nhà để bắt đền
                     if patient.caretaker_id:
                         notif_caretaker = NotificationDB(
                             user_id=patient.caretaker_id,
-                            message=f"Bệnh nhân {patient.name} đã quên xác nhận uống {prescription.medicine} vào lúc {schedule.time}."
+                            message=f"Bệnh nhân {patient.name} đã bỏ lỡ liều {prescription.medicine} lúc {schedule.time}."
                         )
                         db.add(notif_caretaker)
+                        
+                        # BẮN SMS CẤP CỨU CHO BÁC SĨ (Chỉ bắn 1 lần)
+                        if schedule.sms_missed_sent == 0:
+                            caretaker = db.query(UserDB).filter(UserDB.id == patient.caretaker_id).first()
+                            
+                            # Fallback: Tránh lỗi trùng SDT làm hỏng Database, 
+                            # Cứ gửi thẳng về SDT của Bệnh nhân để test nếu Doctor trống SDT!
+                            doctor_token = caretaker.push_token if caretaker and caretaker.push_token else patient.push_token
+                            
+                            if doctor_token:
+                                msg_sos = f"[SOS SmartMed] Benh nhan {patient.name} DA QUEN uong lieu {prescription.medicine} luc {schedule.time}. Thay thuoc can nhac nho ngay!"
+                                background_tasks.add_task(send_notification, doctor_token, "🚨 CẢNH BÁO QUÊN THUỐC", msg_sos)
+                            schedule.sms_missed_sent = 1
 
         except Exception as e:
-            pass # Lỗi parse time
+            pass 
 
     db.commit()
-    return {"message": "Checked missed schedules", "missed_updated": missed_count}
+    return {"message": "Cronjob Done", "missed": missed_count, "reminders_sent": reminders_count}
 
 
 # =========================
