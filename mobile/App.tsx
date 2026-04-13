@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Modal, Platform } from 'react-native';
 import { TopBar } from './src/components/TopBar';
 import { BottomNav } from './src/components/BottomNav';
@@ -12,19 +12,28 @@ import { Notifications } from './src/screens/Notifications';
 import { MedicationReminder } from './src/screens/MedicationReminder';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { Medication, TabId } from './src/types';
-import { User } from './src/services/api';
+import { User, confirmMedicationAPI } from './src/services/api';
+import { InAppNotificationBanner } from './src/components/InAppNotificationBanner';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [activeMedication, setActiveMedication] = useState<Medication | null>(null);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
-
-  if (!currentUser) {
-    return <LoginScreen onLogin={(user) => setCurrentUser(user)} />;
-  }
+  const [refreshKey, setRefreshKey] = useState<number>(0);
 
   const [toastMessage, setToastMessage] = useState<string>('');
+
+  const [inAppNotice, setInAppNotice] = useState<{ title: string, body: string } | null>(null);
+
+  useEffect(() => {
+  }, []);
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    setToastMessage(`Đăng nhập thành công! Chào ${user.name}`);
+    setTimeout(() => setToastMessage(''), 1500);
+  };
 
   const handleLogout = () => {
     setToastMessage('Bạn đã đăng xuất thành công!');
@@ -34,12 +43,68 @@ export default function App() {
     }, 1500);
   };
 
+  const handleConfirmMedication = async () => {
+    if (!currentUser || !activeMedication) return;
+    try {
+      await confirmMedicationAPI(currentUser.id, activeMedication.name, activeMedication.time);
+      setToastMessage('Ghi nhận đã uống thuốc thành công!');
+      setTimeout(() => setToastMessage(''), 1500);
+      setRefreshKey((prev) => prev + 1); // Trigger React hook to reload Dashboard
+    } catch (error: any) {
+      setToastMessage(error.message || 'Lỗi hệ thống khi xác nhận');
+      setTimeout(() => setToastMessage(''), 1500);
+    } finally {
+      setActiveMedication(null);
+    }
+  };
+
+  const handleRemindLater = async () => {
+    if (!activeMedication) return;
+    const medToRemind = activeMedication;
+    setActiveMedication(null);
+    
+    setToastMessage('Sẽ báo thức lại qua Banner chờ 10 giây nữa!');
+    setTimeout(() => setToastMessage(''), 2500);
+
+    // Kích hoạt Mock JS Banner: Tự thả một banner giả lập rớt xuống màn hình
+    setTimeout(() => {
+      setInAppNotice({
+        title: '⌛ Bạn có lịch uống thuốc đang trống!',
+        body: `Đã qua giờ cho thuốc ${medToRemind.name}. Nhấn vào để xác nhận đã uống!`,
+      });
+    }, 10000);
+  };
+
+  if (!currentUser) {
+    return (
+      <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : 'auto' }}>
+        <LoginScreen onLogin={handleLogin} />
+        {!!toastMessage && (
+          <Modal transparent={true} visible={!!toastMessage} animationType="fade">
+            <View style={styles.toastOverlay}>
+              <View style={styles.toastContainer}>
+                <Text style={styles.toastText}>{toastMessage}</Text>
+              </View>
+            </View>
+          </Modal>
+        )}
+      </View>
+    );
+  }
+
   const renderScreen = (): React.ReactNode => {
     if (showNotifications) return <Notifications />;
 
     switch (activeTab) {
       case 'home':
-        return <HomeDashboard onTakeMed={(med) => setActiveMedication(med)} />;
+        return (
+          <HomeDashboard 
+            user={currentUser} 
+            refreshKey={refreshKey} 
+            onTakeMed={(med) => setActiveMedication(med)} 
+            onScheduleHit={(title, body) => setInAppNotice({ title, body })}
+          />
+        );
       case 'analytics':
         return <Analytics />;
       case 'scan':
@@ -49,7 +114,14 @@ export default function App() {
       case 'profile':
         return <Profile onLogout={handleLogout} user={currentUser} />;
       default:
-        return <HomeDashboard onTakeMed={(med) => setActiveMedication(med)} />;
+        return (
+          <HomeDashboard 
+            user={currentUser} 
+            refreshKey={refreshKey} 
+            onTakeMed={(med) => setActiveMedication(med)} 
+            onScheduleHit={(title, body) => setInAppNotice({ title, body })}
+          />
+        );
     }
   };
 
@@ -75,10 +147,17 @@ export default function App() {
       {activeMedication && (
         <MedicationReminder
           medication={activeMedication}
-          onClose={() => setActiveMedication(null)}
-          onConfirm={() => setActiveMedication(null)}
+          onClose={handleRemindLater}
+          onConfirm={handleConfirmMedication}
         />
       )}
+
+      <InAppNotificationBanner 
+        title={inAppNotice?.title || ''}
+        body={inAppNotice?.body || ''}
+        visible={!!inAppNotice}
+        onClose={() => setInAppNotice(null)}
+      />
 
       {/* Global Logout Toast */}
       {!!toastMessage && (
@@ -97,6 +176,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    minHeight: Platform.OS === 'web' ? '100vh' : 'auto',
     backgroundColor: '#F8FAFC',
   },
   content: {

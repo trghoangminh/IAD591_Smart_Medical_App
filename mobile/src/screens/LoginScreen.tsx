@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Button } from '../components/Button';
 import { theme } from '../styles/theme';
 import { Lock, User as UserIcon, HeartPulse } from 'lucide-react-native';
@@ -14,17 +14,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [password, setPassword] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string>('');
-
-  const showToastAndLogin = (user: User) => {
-    setToastMessage(`Đăng nhập thành công! Chào ${user.name}`);
-    // Hiện toast 1.5 giây rồi mới chuyển trang
-    setTimeout(() => {
-      setToastMessage('');
-      onLogin(user);
-    }, 1500);
-  };
-
   const handleLogin = async () => {
     if (!username || !password) {
       setErrorMsg('Vui lòng nhập đủ thông tin (Tài khoản và mật khẩu)');
@@ -34,7 +23,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setLoading(true);
     try {
       const user = await loginAPI(username, password);
-      showToastAndLogin(user);
+      onLogin(user);
     } catch (err: any) {
       setErrorMsg(err.message || 'Lỗi kết nối máy chủ');
       setLoading(false); // Chỉ tắt loading khi lỗi, nếu đúng thì để chữ loading xoay xoay đẹp hơn
@@ -98,15 +87,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           </View>
         </View>
       </KeyboardAvoidingView>
-
-      {/* Hệ thống Toast siêu việt bằng Modal nổi 100% */}
-      <Modal transparent={true} visible={!!toastMessage} animationType="fade">
-        <View style={styles.toastOverlay}>
-          <View style={styles.toastContainer}>
-            <Text style={styles.toastText}>{toastMessage}</Text>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
@@ -207,28 +187,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     fontWeight: '500'
-  },
-  toastOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingBottom: Platform.OS === 'ios' ? 120 : 80,
-  },
-  toastContainer: {
-    backgroundColor: '#1E293B',
-    paddingVertical: 14,
-    paddingHorizontal: 30,
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  toastText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center'
   }
 });
