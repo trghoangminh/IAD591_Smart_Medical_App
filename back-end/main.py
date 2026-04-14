@@ -12,8 +12,25 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import urllib.request
+import json
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8634667672:AAEtiE5bMt52NrCBrJ1MB_7UHH5-G_b0kVE")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "8569010173")
+
 def send_notification(push_token: str, title: str, body: str):
     print(f"[ALARM] {title}: {body}")
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        data = json.dumps({
+            "chat_id": TELEGRAM_CHAT_ID, 
+            "text": body,
+            "parse_mode": "Markdown"
+        }).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print("Lỗi Telegram:", e)
 
 # =========================
 # DATABASE CONFIG
@@ -471,9 +488,17 @@ def check_missed_schedules(background_tasks: BackgroundTasks, db: Session = Depe
                             # Cứ gửi thẳng về SDT của Bệnh nhân để test nếu Doctor trống SDT!
                             doctor_token = caretaker.push_token if caretaker and caretaker.push_token else patient.push_token
                             
-                            if doctor_token:
-                                msg_sos = f"[SOS SmartMed] Benh nhan {patient.name} DA QUEN uong lieu {prescription.medicine} luc {schedule.time}. Thay thuoc can nhac nho ngay!"
-                                background_tasks.add_task(send_notification, doctor_token, "🚨 CẢNH BÁO QUÊN THUỐC", msg_sos)
+                            # Cho phép Push Telegram khẩn cấp dù người dùng thiếu Token thiết bị
+                            msg_sos_body = f"""🚨 *BÁO ĐỘNG QUÊN THUỐC* 🚨
+
+Hệ thống y tế SmartMed ghi nhận bệnh nhân đã bỏ lỡ lịch uống thuốc. Bác sĩ hoặc người nhà vui lòng liên hệ ngay để đôn đốc nhé!
+
+👤 **Bệnh nhân:** {patient.name}
+💊 **Loại thuốc:** {prescription.medicine}
+⏰ **Giờ lên lịch:** {schedule.time}
+⚠️ **Trạng thái:** Quá hạn báo động"""
+                            background_tasks.add_task(send_notification, doctor_token or "telegram", "🚨 CẢNH BÁO QUÊN THUỐC", msg_sos_body)
+                            
                             schedule.sms_missed_sent = 1
 
         except Exception as e:

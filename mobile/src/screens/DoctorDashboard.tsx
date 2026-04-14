@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity
 import { Card } from '../components/Card';
 import { Users, Phone, User as UserIcon, Calendar, Activity } from 'lucide-react-native';
 import { theme } from '../styles/theme';
-import { User, getDoctorPatientsAPI, PatientResponse } from '../services/api';
+import { User, getDoctorPatientsAPI, PatientResponse, checkMissedSchedulesAPI } from '../services/api';
 
 interface DoctorDashboardProps {
   user: User;
@@ -19,6 +19,9 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user }) => {
   };
 
   useEffect(() => {
+    // Chạy CronJob giả lập: Kiểm tra các bệnh nhân quên thuốc
+    checkMissedSchedulesAPI();
+
     const loadPatients = async () => {
       try {
         setLoading(true);
