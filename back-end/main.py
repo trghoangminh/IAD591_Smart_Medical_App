@@ -228,6 +228,55 @@ def update_push_token(data: PushTokenUpdate, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success"}
 
+@app.get("/api/users/{user_id}")
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    u = db.query(UserDB).filter(UserDB.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "id": u.id,
+        "name": u.name,
+        "role": u.role,
+        "phone": u.phone,
+        "email": u.email,
+        "caretaker_id": u.caretaker_id
+    }
+
+@app.get("/api/doctor/{doctor_id}/patients")
+def get_patients(doctor_id: int, db: Session = Depends(get_db)):
+    # Bệnh nhân của bác sĩ là user do bác sĩ chăm sóc
+    patients = db.query(UserDB).filter(UserDB.caretaker_id == doctor_id).all()
+    # Để Dashboard thêm trực quan, có thể tính toán số lượng thuốc đã uống vs chưa uống cho mỗi bệnh nhân (Adherence rate)
+    # Tuy nhiên vì thời gian MVP, ta trả thông tin cơ bản kèm adherence rate tĩnh
+    results = []
+    for p in patients:
+        schedules = db.query(ScheduleDB).join(PrescriptionDB).filter(PrescriptionDB.user_id == p.id).all()
+        total = len(schedules)
+        taken = sum(1 for s in schedules if s.status == "taken")
+        adherence = round((taken / total * 100) if total > 0 else 100)
+        
+        prescriptions_db = db.query(PrescriptionDB).filter(PrescriptionDB.user_id == p.id).all()
+        prescriptions_list = []
+        for pres in prescriptions_db:
+            pres_schedules = [s.time for s in pres.schedules]
+            prescriptions_list.append({
+                "id": pres.id,
+                "medicine": pres.medicine,
+                "dosage": pres.dosage,
+                "times": pres_schedules
+            })
+
+        results.append({
+            "id": p.id,
+            "name": p.name,
+            "phone": p.phone or "Trống",
+            "email": p.email or "Trống",
+            "adherence_rate": adherence,
+            "prescriptions_count": len(prescriptions_list),
+            "prescriptions": prescriptions_list
+        })
+    return results
+
 # =========================
 # API 2: CREATE PRESCRIPTION
 # =========================

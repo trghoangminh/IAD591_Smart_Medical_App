@@ -11,6 +11,7 @@ import { Profile } from './src/screens/Profile';
 import { Notifications } from './src/screens/Notifications';
 import { MedicationReminder } from './src/screens/MedicationReminder';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { DoctorDashboard } from './src/screens/DoctorDashboard';
 import { Medication, TabId } from './src/types';
 import { User, confirmMedicationAPI } from './src/services/api';
 import { InAppNotificationBanner } from './src/components/InAppNotificationBanner';
@@ -93,10 +94,13 @@ export default function App() {
   }
 
   const renderScreen = (): React.ReactNode => {
-    if (showNotifications) return <Notifications />;
+    if (showNotifications) return <Notifications user={currentUser} />;
 
     switch (activeTab) {
       case 'home':
+        if (currentUser.role === 'doctor') {
+          return <DoctorDashboard user={currentUser} />;
+        }
         return (
           <HomeDashboard 
             user={currentUser} 
@@ -108,9 +112,19 @@ export default function App() {
       case 'analytics':
         return <Analytics />;
       case 'scan':
-        return <ScanPrescription />;
+        return (
+          <ScanPrescription 
+            user={currentUser} 
+            onAdded={() => { 
+                setRefreshKey(prev => prev + 1); 
+                setActiveTab('home'); 
+                setToastMessage('Thêm đơn thuốc thành công!'); 
+            }} 
+            onCancel={() => setActiveTab('home')}
+          />
+        );
       case 'history':
-        return <History />;
+        return <History user={currentUser} />;
       case 'profile':
         return <Profile onLogout={handleLogout} user={currentUser} />;
       default:
@@ -142,6 +156,7 @@ export default function App() {
           setActiveTab(tab);
           setShowNotifications(false);
         }}
+        userRole={currentUser.role}
       />
 
       {activeMedication && (

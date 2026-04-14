@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { User as UserIcon, Phone, LogOut, Bell, Moon } from 'lucide-react-native';
 import { theme } from '../styles/theme';
-import { User } from '../services/api';
+import { User, getUserAPI } from '../services/api';
 
 interface ProfileProps {
   onLogout: () => void;
@@ -14,6 +14,15 @@ interface ProfileProps {
 export const Profile: React.FC<ProfileProps> = ({ onLogout, user }) => {
   const [notifications, setNotifications] = useState<boolean>(true);
   const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [caretaker, setCaretaker] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (user.caretaker_id) {
+      getUserAPI(user.caretaker_id)
+        .then(setCaretaker)
+        .catch(console.warn);
+    }
+  }, [user.caretaker_id]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -33,27 +42,27 @@ export const Profile: React.FC<ProfileProps> = ({ onLogout, user }) => {
       </Card>
 
       <Text style={styles.sectionTitle}>Liên hệ y tế</Text>
-      <Card style={styles.contactCard}>
-        <View style={styles.contactInfo}>
-          <Text style={styles.contactRole}>Bác sĩ chính</Text>
-          <Text style={styles.contactName}>Dr. Gregory House</Text>
-          <Text style={styles.contactPhone}>+1 (555) 019-8372</Text>
-        </View>
-        <View style={styles.callIcon}>
-          <Phone size={20} color={theme.colors.success} />
-        </View>
-      </Card>
-
-      <Card style={styles.contactCard}>
-        <View style={styles.contactInfo}>
-          <Text style={styles.contactRole}>Người chăm sóc</Text>
-          <Text style={styles.contactName}>Chidi Anagonye</Text>
-          <Text style={styles.contactPhone}>+1 (555) 124-5555</Text>
-        </View>
-        <View style={styles.callIcon}>
-          <Phone size={20} color={theme.colors.success} />
-        </View>
-      </Card>
+      
+      {caretaker ? (
+        <Card style={styles.contactCard}>
+          <View style={styles.contactInfo}>
+            <Text style={styles.contactRole}>{caretaker.role === 'doctor' ? 'Bác sĩ chính' : 'Người chăm sóc'}</Text>
+            <Text style={styles.contactName}>{caretaker.name}</Text>
+            <Text style={styles.contactPhone}>{caretaker.phone}</Text>
+          </View>
+          <View style={styles.callIcon}>
+            <Phone size={20} color={theme.colors.success} />
+          </View>
+        </Card>
+      ) : (
+        <Card style={styles.contactCard}>
+          <View style={styles.contactInfo}>
+            <Text style={styles.contactRole}>Trống</Text>
+            <Text style={styles.contactName}>Chưa thiết lập liên hệ y tế</Text>
+            <Text style={styles.contactPhone}>Vui lòng cập nhật trên hệ thống</Text>
+          </View>
+        </Card>
+      )}
 
       <Text style={styles.sectionTitle}>Cài đặt</Text>
       <Card style={styles.settingCard}>

@@ -10,7 +10,8 @@ export interface User {
 }
 
 // Sử dụng IP mạng LAN của máy Mac để test qua đt thật thay vì localhost
-const DEFAULT_API_URL = 'http://192.168.1.191:8000';
+const LOCAL_IP = '192.168.1.191';
+const DEFAULT_API_URL = Platform.OS === 'web' ? 'http://localhost:8000' : `http://${LOCAL_IP}:8000`;
 
 export const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_URL;
 
@@ -39,7 +40,13 @@ export interface ScheduleResponse {
 }
 
 export const getScheduleAPI = async (userId: number): Promise<ScheduleResponse[]> => {
-  const response = await fetch(`${apiBaseUrl}/api/schedule/${userId}`);
+  const response = await fetch(`${apiBaseUrl}/api/schedule/${userId}?t=${Date.now()}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
   if (!response.ok) {
     throw new Error('Lỗi tải dữ liệu lịch uống thuốc!');
   }
@@ -60,6 +67,95 @@ export const confirmMedicationAPI = async (userId: number, medicine: string, tim
   }
 };
 
+export interface HistoryResponse {
+  log_id: number;
+  medicine: string;
+  scheduled_time: string;
+  status: 'taken' | 'missed';
+  timestamp: string;
+}
+
+export const getHistoryAPI = async (userId: number): Promise<HistoryResponse[]> => {
+  const response = await fetch(`${apiBaseUrl}/api/history/${userId}?t=${Date.now()}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Lỗi tải dữ liệu lịch sử!');
+  }
+  return await response.json() as HistoryResponse[];
+};
+
+export interface NotificationResponse {
+  id: number;
+  message: string;
+  is_read: number;
+  timestamp: string;
+}
+
+export const getNotificationsAPI = async (userId: number): Promise<NotificationResponse[]> => {
+  const response = await fetch(`${apiBaseUrl}/api/notifications/${userId}?t=${Date.now()}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Lỗi tải thông báo!');
+  }
+  return await response.json() as NotificationResponse[];
+};
+
+export const getUserAPI = async (userId: number): Promise<User> => {
+  const response = await fetch(`${apiBaseUrl}/api/users/${userId}?t=${Date.now()}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Lỗi tải thông tin user!');
+  }
+  return await response.json() as User;
+};
+
+export interface PatientPrescription {
+  id: number;
+  medicine: string;
+  dosage: number;
+  times: string[];
+}
+
+export interface PatientResponse {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  adherence_rate: number;
+  prescriptions_count: number;
+  prescriptions: PatientPrescription[];
+}
+
+export const getDoctorPatientsAPI = async (doctorId: number): Promise<PatientResponse[]> => {
+  const response = await fetch(`${apiBaseUrl}/api/doctor/${doctorId}/patients?t=${Date.now()}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Lỗi tải danh sách bệnh nhân!');
+  }
+  return await response.json() as PatientResponse[];
+};
+
+
 export const checkMissedSchedulesAPI = async (): Promise<void> => {
   try {
     const response = await fetch(`${apiBaseUrl}/api/cron/check-missed-schedules`, {
@@ -72,4 +168,28 @@ export const checkMissedSchedulesAPI = async (): Promise<void> => {
   } catch (error) {
     console.warn('Không thể kết nối đến máy chủ để dọn dẹp lịch.');
   }
+};
+
+export interface PrescriptionCreate {
+  user_id: number;
+  medicine: string;
+  dosage: number;
+  times: string[];
+  start_date?: string;
+  end_date?: string;
+}
+
+export const createPrescriptionAPI = async (data: PrescriptionCreate): Promise<any> => {
+  const response = await fetch(`${apiBaseUrl}/api/prescriptions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Lỗi thêm đơn thuốc!');
+  }
+  
+  return await response.json();
 };

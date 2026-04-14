@@ -1,34 +1,57 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Card } from '../components/Card';
-import { Bell, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { Bell, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { NotificationAlert, AlertType } from '../types';
+import { User, getNotificationsAPI } from '../services/api';
 
-export const Notifications: React.FC = () => {
-  const alerts: NotificationAlert[] = [
-    {
-      id: 1,
-      type: 'warning',
-      title: 'Bỏ lỡ liều',
-      message: 'Bạn có thể đã quên uống Lisinopril lúc 12:30.',
-      time: '1 giờ trước',
-    },
-    {
-      id: 2,
-      type: 'info',
-      title: 'Nhắc nhở nạp thêm',
-      message: 'Bạn chỉ còn 5 ngày thuốc Metformin.',
-      time: '5 giờ trước',
-    },
-    {
-      id: 3,
-      type: 'success',
-      title: 'Đạt mục tiêu tuần',
-      message: 'Làm tốt lắm! Bạn đã tuân thủ 100% trong tuần này.',
-      time: '1 ngày trước',
-    },
-  ];
+interface NotificationsProps {
+  user: User;
+}
+
+export const Notifications: React.FC<NotificationsProps> = ({ user }) => {
+  const [alerts, setAlerts] = useState<NotificationAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        setLoading(true);
+        const data = await getNotificationsAPI(user.id);
+        
+        // Suy diễn icon theo message
+        const mapped: NotificationAlert[] = data.map((alert) => {
+           let t: AlertType = 'info';
+           const text = alert.message.toLowerCase();
+           if (text.includes('quên') || text.includes('bỏ lỡ') || text.includes('trễ')) t = 'warning';
+           if (text.includes('thành công') || text.includes('làm tốt')) t = 'success';
+           
+           const d = new Date(alert.timestamp);
+           const diffMs = new Date().getTime() - d.getTime();
+           const diffMins = Math.floor(diffMs / 60000);
+           let timeStr = 'Vừa xong';
+           if (diffMins >= 1440) timeStr = `${Math.floor(diffMins / 1440)} ngày trước`;
+           else if (diffMins >= 60) timeStr = `${Math.floor(diffMins / 60)} giờ trước`;
+           else if (diffMins > 0) timeStr = `${diffMins} phút trước`;
+
+           return {
+             id: alert.id,
+             title: t === 'warning' ? 'Cảnh báo bỏ lỡ' : t === 'success' ? 'Thông báo tốt' : 'Hệ thống SmartMed',
+             message: alert.message,
+             type: t,
+             time: timeStr
+           };
+        });
+        setAlerts(mapped);
+      } catch (err) {
+        console.warn('Lỗi gọi API Notification', err);
+      } finally {
+        setTimeout(() => setLoading(false), 100);
+      }
+    };
+    fetchNotifications();
+  }, [user]);
 
   const getIcon = (type: AlertType): React.ReactNode => {
     switch (type) {
@@ -58,20 +81,29 @@ export const Notifications: React.FC = () => {
         <Text style={styles.title}>Thông báo</Text>
       </View>
 
-      <View style={styles.list}>
-        {alerts.map((alert) => (
-          <Card key={alert.id} style={styles.card}>
-            <View style={[styles.iconBox, { backgroundColor: getBgColor(alert.type) }]}>
-              {getIcon(alert.type)}
-            </View>
-            <View style={styles.info}>
-              <Text style={styles.alertTitle}>{alert.title}</Text>
-              <Text style={styles.alertMsg}>{alert.message}</Text>
-              <Text style={styles.time}>{alert.time}</Text>
-            </View>
-          </Card>
-        ))}
-      </View>
+      {loading ? (
+        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
+      ) : alerts.length === 0 ? (
+        <View style={{ alignItems: 'center', marginTop: 40, opacity: 0.5 }}>
+          <Bell size={48} color={theme.colors.textMuted} />
+          <Text style={{ fontSize: 16, color: theme.colors.textMuted, marginTop: 16 }}>Không có thông báo mới nào</Text>
+        </View>
+      ) : (
+        <View style={styles.list}>
+          {alerts.map((alert) => (
+            <Card key={alert.id} style={styles.card}>
+              <View style={[styles.iconBox, { backgroundColor: getBgColor(alert.type) }]}>
+                {getIcon(alert.type)}
+              </View>
+              <View style={styles.info}>
+                <Text style={styles.alertTitle}>{alert.title}</Text>
+                <Text style={styles.alertMsg}>{alert.message}</Text>
+                <Text style={styles.time}>{alert.time}</Text>
+              </View>
+            </Card>
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 };

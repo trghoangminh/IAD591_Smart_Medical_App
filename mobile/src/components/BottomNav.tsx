@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Home, ScanLine, BarChart2, Clock, User, LucideIcon } from 'lucide-react-native';
+import { Home, ScanLine, BarChart2, Clock, User as UserIcon, Users, LucideIcon } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { TabId } from '../types';
 
@@ -13,16 +13,25 @@ interface Tab {
 interface BottomNavProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+  userRole: string;
 }
 
-export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
-  const tabs: Tab[] = [
+export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, userRole }) => {
+  const patientTabs: Tab[] = [
     { id: 'home', label: 'Trang chủ', icon: Home },
     { id: 'analytics', label: 'Báo cáo', icon: BarChart2 },
     { id: 'scan', label: 'Quét', icon: ScanLine },
     { id: 'history', label: 'Lịch sử', icon: Clock },
-    { id: 'profile', label: 'Cá nhân', icon: User },
+    { id: 'profile', label: 'Cá nhân', icon: UserIcon },
   ];
+
+  const doctorTabs: Tab[] = [
+    { id: 'home', label: 'Bệnh nhân', icon: Users },
+    { id: 'scan', label: 'Kê đơn', icon: ScanLine },
+    { id: 'profile', label: 'Cá nhân', icon: UserIcon },
+  ];
+
+  const tabs = userRole === 'doctor' ? doctorTabs : patientTabs;
 
   return (
     <View style={styles.navContainer}>

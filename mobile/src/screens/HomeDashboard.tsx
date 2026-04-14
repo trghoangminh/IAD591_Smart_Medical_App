@@ -23,8 +23,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ user, refreshKey, 
     const loadSchedule = async () => {
       if (!user) return;
       try {
-        // Gửi lệnh giục Server dọn dẹp và gài cờ đỏ cho tất cả thuốc quá hạn 30 phút.
-        await checkMissedSchedulesAPI();
+        // Chạy nền checkMissedSchedulesAPI để không làm chậm lúc lấy dữ liệu
+        checkMissedSchedulesAPI().catch(() => {});
 
         // Mới tiến hành nhặt dữ liệu về để soi UI
         const result = await getScheduleAPI(user.id);
@@ -47,7 +47,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ user, refreshKey, 
       } catch (error) {
         console.error(error);
       } finally {
-        setLoading(false);
+        // Delay nhẹ tắt loading để tránh chớp giật màn hình
+        setTimeout(() => setLoading(false), 100);
       }
     };
     
@@ -94,14 +95,6 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ user, refreshKey, 
     return () => clearInterval(timer);
   }, [schedule]);
 
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
-
   const todayStr = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' });
   const total = schedule.length;
   const taken = schedule.filter((m) => m.status === 'taken').length;
@@ -129,8 +122,11 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ user, refreshKey, 
 
       <Text style={styles.sectionTitle}>Lịch uống hôm nay</Text>
 
-      {schedule.map((med) => (
-        <Card key={med.id} style={styles.medCard}>
+      {loading && schedule.length === 0 ? (
+        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
+      ) : (
+        schedule.map((med) => (
+          <Card key={med.id} style={styles.medCard}>
           <View style={styles.medHeader}>
             <View
               style={[
@@ -190,7 +186,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ user, refreshKey, 
             </View>
           )}
         </Card>
-      ))}
+      )))}
     </ScrollView>
   );
 };

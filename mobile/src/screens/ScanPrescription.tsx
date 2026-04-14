@@ -5,22 +5,30 @@ import { Card } from '../components/Card';
 import { Camera, CheckCircle2, RefreshCcw } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { createPrescriptionAPI, User } from '../services/api';
 
 type ScanStep = 'camera' | 'preview' | 'form';
 
-export const ScanPrescription: React.FC = () => {
+interface ScanPrescriptionProps {
+  user?: User;
+  onAdded?: () => void;
+  onCancel?: () => void;
+}
+
+export const ScanPrescription: React.FC<ScanPrescriptionProps> = ({ user, onAdded, onCancel }) => {
   const [step, setStep] = useState<ScanStep>('camera');
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [scannedData, setScannedData] = useState<string | null>(null);
+  const [isManual, setIsManual] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleBarcodeScanned = ({ data }: { type: string; data: string }) => {
-    if (step === 'camera') {
-      setScannedData(data);
-      setStep('form');
-    }
-  };
+  // Form states
+  const [medicine, setMedicine] = useState('Amlodipine');
+  const [dosage, setDosage] = useState('5');
+  const [times, setTimes] = useState('08:00, 20:00');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState('');
 
   const handleCapture = async (): Promise<void> => {
     if (cameraRef.current) {
@@ -32,7 +40,31 @@ export const ScanPrescription: React.FC = () => {
     }
   };
 
-  const handleApprove = (): void => setStep('form');
+  const handleApprove = (): void => {
+    setIsManual(false);
+    setStep('form');
+  };
+
+  const handleSubmit = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const timesList = times.split(',').map((t) => t.trim()).filter(Boolean);
+      await createPrescriptionAPI({
+        user_id: user.id,
+        medicine,
+        dosage: parseInt(dosage) || 1,
+        times: timesList.length ? timesList : ['08:00'],
+        start_date: startDate || undefined,
+        end_date: endDate || undefined,
+      });
+      onAdded?.();
+    } catch (err) {
+      console.warn('Lỗi thêm thuốc', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -54,6 +86,9 @@ export const ScanPrescription: React.FC = () => {
         <Button variant="primary" onPress={requestPermission}>
           Cấp quyền Camera
         </Button>
+        <Button variant="secondary" onPress={() => { setIsManual(true); setStep('form'); }} style={{ marginTop: 12 }}>
+          Hoặc nhập thủ công
+        </Button>
       </View>
     );
   }
@@ -62,7 +97,7 @@ export const ScanPrescription: React.FC = () => {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>Thêm thuốc</Text>
-        <Text style={styles.subtitle}>Quét nhãn thuốc hoặc đơn thuốc</Text>
+        <Text style={styles.subtitle}>Quét nhãn thuốc hoặc nhập thông tin</Text>
       </View>
 
       {step === 'camera' && (
@@ -72,10 +107,6 @@ export const ScanPrescription: React.FC = () => {
               style={styles.viewfinder}
               facing="back"
               ref={cameraRef}
-              barcodeScannerSettings={{
-                barcodeTypes: ['qr', 'ean13', 'ean8', 'pdf417', 'code39', 'code128', 'upc_a'],
-              }}
-              onBarcodeScanned={step === 'camera' ? handleBarcodeScanned : undefined}
             >
               <View style={[styles.bracket, styles.tr]} />
               <View style={[styles.bracket, styles.tl]} />
@@ -93,6 +124,14 @@ export const ScanPrescription: React.FC = () => {
           >
             Chụp thủ công
           </Button>
+
+          <Button
+            variant="secondary"
+            onPress={() => { setIsManual(true); setStep('form'); }}
+            style={{ marginTop: 12, borderColor: 'transparent', backgroundColor: '#F1F5F9' }}
+          >
+            Nhập tay thủ công
+          </Button>
         </View>
       )}
 
@@ -102,18 +141,7 @@ export const ScanPrescription: React.FC = () => {
             {photoUri ? (
               <Image source={{ uri: photoUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
             ) : (
-              <View
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: '#CBD5E1',
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ color: theme.colors.textMuted }}>[ Không có ảnh ]</Text>
-              </View>
+              <View style={{ flex: 1, backgroundColor: '#CBD5E1' }} />
             )}
           </View>
           <View style={{ flexDirection: 'row', marginTop: theme.spacing.lg, gap: 12 }}>
@@ -140,33 +168,49 @@ export const ScanPrescription: React.FC = () => {
       {step === 'form' && (
         <View style={styles.formContainer}>
           <Card>
-            <View style={styles.successHeader}>
-              <CheckCircle2 size={24} color={theme.colors.success} />
-              <Text style={styles.successText}>Quét thành công</Text>
-            </View>
+            {!isManual ? (
+              <View style={styles.successHeader}>
+                <CheckCircle2 size={24} color={theme.colors.success} />
+                <Text style={styles.successText}>Quét thành công (Mô phỏng)</Text>
+              </View>
+            ) : (
+              <View style={styles.successHeader}>
+                <Text style={styles.successText}>📝 Nhập thông tin</Text>
+              </View>
+            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tên thuốc</Text>
-              <TextInput style={styles.input} defaultValue="Amlodipine" />
+              <TextInput style={styles.input} value={medicine} onChangeText={setMedicine} placeholder="Ví dụ: Paracetamol" />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Liều lượng</Text>
-              <TextInput style={styles.input} defaultValue="5mg" />
+              <Text style={styles.label}>Liều lượng (viên/mg)</Text>
+              <TextInput style={styles.input} value={dosage} onChangeText={setDosage} keyboardType="numeric" placeholder="Ví dụ: 1" />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tần suất</Text>
-              <TextInput style={styles.input} defaultValue="1 Viên mỗi ngày" />
+              <Text style={styles.label}>Giờ uống (cách nhau bởi dấu phẩy)</Text>
+              <TextInput style={styles.input} value={times} onChangeText={setTimes} placeholder="08:00, 20:00" />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Ngày bắt đầu (Tùy chọn, YYYY-MM-DD)</Text>
+              <TextInput style={styles.input} value={startDate} onChangeText={setStartDate} placeholder="2024-01-01" />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Ngày kết thúc (Tùy chọn, YYYY-MM-DD)</Text>
+              <TextInput style={styles.input} value={endDate} onChangeText={setEndDate} placeholder="2024-12-31" />
             </View>
           </Card>
 
           <View style={styles.actionRow}>
-            <Button variant="secondary" onPress={() => setStep('camera')} style={{ flex: 1, marginRight: 8 }}>
+            <Button variant="secondary" onPress={() => onCancel?.()} style={{ flex: 1, marginRight: 8 }}>
               Hủy
             </Button>
-            <Button variant="primary" style={{ flex: 2 }}>
-              Thêm vào lịch
+            <Button variant="primary" onPress={handleSubmit} style={{ flex: 2 }} disabled={loading}>
+              {loading ? 'Đang lưu...' : 'Thêm vào lịch'}
             </Button>
           </View>
         </View>

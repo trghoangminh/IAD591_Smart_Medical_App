@@ -1,19 +1,75 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card } from '../components/Card';
 import { CheckCircle2, XCircle } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { TimelineItem } from '../types';
+import { User, getHistoryAPI } from '../services/api';
 
-export const History: React.FC = () => {
+interface HistoryProps {
+  user: User;
+}
+
+interface ProcessedTimelineItem extends TimelineItem {
+  timestampDate: Date;
+}
+
+export const History: React.FC<HistoryProps> = ({ user }) => {
   const [filter, setFilter] = useState<string>('Hôm nay');
+  const [data, setData] = useState<ProcessedTimelineItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const timeline: TimelineItem[] = [
-    { id: 1, time: '12:35 PM', scheduled: '12:30 PM', name: 'Lisinopril (10mg)', status: 'taken', date: 'Hôm nay' },
-    { id: 2, time: '08:05 AM', scheduled: '08:00 AM', name: 'Metformin (500mg)', status: 'taken', date: 'Hôm nay' },
-    { id: 3, time: '09:00 PM', scheduled: '08:00 PM', name: 'Atorvastatin (20mg)', status: 'missed', date: 'Hôm qua' },
-    { id: 4, time: '12:30 PM', scheduled: '12:30 PM', name: 'Lisinopril (10mg)', status: 'taken', date: 'Hôm qua' },
-  ];
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        setLoading(true);
+        const result = await getHistoryAPI(user.id);
+
+        const formatDateLabel = (isoStr: string) => {
+          const date = new Date(isoStr);
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          const isSameDay = (d1: Date, d2: Date) => 
+            d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+          
+          if (isSameDay(date, today)) return 'Hôm nay';
+          if (isSameDay(date, yesterday)) return 'Hôm qua';
+          return date.toLocaleDateString('vi-VN');
+        };
+
+        const formatTime = (isoStr: string) => {
+          const d = new Date(isoStr);
+          return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        };
+
+        const mapped: ProcessedTimelineItem[] = result.map((r) => ({
+          id: r.log_id,
+          name: r.medicine,
+          status: r.status,
+          scheduled: r.scheduled_time,
+          time: formatTime(r.timestamp),
+          date: formatDateLabel(r.timestamp),
+          timestampDate: new Date(r.timestamp),
+        }));
+        
+        setData(mapped);
+      } catch (err) {
+        console.warn('Lỗi tải lịch sử:', err);
+      } finally {
+        setTimeout(() => setLoading(false), 100);
+      }
+    };
+    loadHistory();
+  }, [user]);
+
+  const filteredTimeline = data.filter((item) => {
+    if (filter === 'Hôm nay') return item.date === 'Hôm nay';
+    const diffDays = (new Date().getTime() - item.timestampDate.getTime()) / (1000 * 3600 * 24);
+    if (filter === '7 Ngày') return diffDays <= 7;
+    return diffDays <= 30; // 30 Ngày
+  });
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -34,32 +90,42 @@ export const History: React.FC = () => {
         ))}
       </View>
 
-      <View style={styles.timelineContainer}>
-        {timeline.map((item, index) => (
-          <View key={item.id} style={styles.timelineItem}>
-            {index !== timeline.length - 1 && <View style={styles.line} />}
+      {loading ? (
+        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
+      ) : filteredTimeline.length === 0 ? (
+        <View style={{ alignItems: 'center', marginTop: 40, opacity: 0.5 }}>
+          <Text style={{ fontSize: 16, color: theme.colors.textMuted }}>Không có ghi nhận nào</Text>
+        </View>
+      ) : (
+        <View style={styles.timelineContainer}>
+          {filteredTimeline.map((item, index) => (
+            <View key={item.id} style={styles.timelineItem}>
+              {index !== filteredTimeline.length - 1 && <View style={styles.line} />}
 
-            <View style={styles.statusDot}>
-              {item.status === 'taken' ? (
-                <CheckCircle2 size={24} color={theme.colors.success} />
-              ) : (
-                <XCircle size={24} color={theme.colors.danger} />
-              )}
+              <View style={styles.statusDot}>
+                {item.status === 'taken' ? (
+                  <CheckCircle2 size={24} color={theme.colors.success} />
+                ) : (
+                  <XCircle size={24} color={theme.colors.danger} />
+                )}
+              </View>
+
+              <Card style={styles.timelineCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemDate}>{item.date}</Text>
+                </View>
+                <View style={styles.cardDetails}>
+                  <Text style={[styles.actualTime, item.status === 'missed' && { color: theme.colors.danger }]}>
+                    {item.status === 'taken' ? `Đã uống: ${item.time}` : 'Bỏ lỡ'}
+                  </Text>
+                  <Text style={styles.scheduledTime}>Đã lên lịch: {item.scheduled}</Text>
+                </View>
+              </Card>
             </View>
-
-            <Card style={styles.timelineCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemDate}>{item.date}</Text>
-              </View>
-              <View style={styles.cardDetails}>
-                <Text style={styles.actualTime}>Đã uống: {item.time}</Text>
-                <Text style={styles.scheduledTime}>Đã lên lịch: {item.scheduled}</Text>
-              </View>
-            </Card>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 };
