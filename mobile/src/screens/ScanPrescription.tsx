@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, Image } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Camera, CheckCircle2, RefreshCcw } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { createPrescriptionAPI, User } from '../services/api';
+import { createPrescriptionAPI, User, getDoctorPatientsAPI, PatientResponse } from '../services/api';
 
 type ScanStep = 'camera' | 'preview' | 'form';
 
@@ -30,6 +30,19 @@ export const ScanPrescription: React.FC<ScanPrescriptionProps> = ({ user, onAdde
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState('');
 
+  const [patients, setPatients] = useState<PatientResponse[]>([]);
+  const [targetPatientId, setTargetPatientId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (user?.role === 'doctor') {
+      getDoctorPatientsAPI(user.id)
+        .then(data => setPatients(data))
+        .catch(err => console.warn(err));
+    } else {
+      setTargetPatientId(user?.id || null);
+    }
+  }, [user]);
+
   const handleCapture = async (): Promise<void> => {
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
@@ -47,11 +60,16 @@ export const ScanPrescription: React.FC<ScanPrescriptionProps> = ({ user, onAdde
 
   const handleSubmit = async () => {
     if (!user) return;
+    if (user.role === 'doctor' && !targetPatientId) {
+      alert('Vui lòng chọn bệnh nhân để kê đơn!');
+      return;
+    }
+
     setLoading(true);
     try {
       const timesList = times.split(',').map((t) => t.trim()).filter(Boolean);
       await createPrescriptionAPI({
-        user_id: user.id,
+        user_id: targetPatientId as number,
         medicine,
         dosage: parseInt(dosage) || 1,
         times: timesList.length ? timesList : ['08:00'],
@@ -167,6 +185,34 @@ export const ScanPrescription: React.FC<ScanPrescriptionProps> = ({ user, onAdde
 
       {step === 'form' && (
         <View style={styles.formContainer}>
+          {user?.role === 'doctor' && (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={styles.label}>Bác sĩ kê đơn cho Bệnh Nhân:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                {patients.map(p => (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={[
+                      styles.patientPill,
+                      targetPatientId === p.id && styles.patientPillActive
+                    ]}
+                    onPress={() => setTargetPatientId(p.id)}
+                  >
+                    <Text style={[
+                      styles.patientPillText,
+                      targetPatientId === p.id && styles.patientPillTextActive
+                    ]}>
+                      {p.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {patients.length === 0 && (
+                  <Text style={{color: theme.colors.textMuted, fontSize: 13, marginTop: 4}}>Chưa có bệnh nhân nào khả dụng.</Text>
+                )}
+              </ScrollView>
+            </View>
+          )}
+
           <Card>
             {!isManual ? (
               <View style={styles.successHeader}>
@@ -259,4 +305,26 @@ const styles = StyleSheet.create({
     color: theme.colors.textMain,
   },
   actionRow: { flexDirection: 'row', marginTop: theme.spacing.sm },
+  patientPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  patientPillActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  patientPillText: {
+    fontSize: 14,
+    color: theme.colors.textMuted,
+    fontWeight: '500',
+  },
+  patientPillTextActive: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
 });

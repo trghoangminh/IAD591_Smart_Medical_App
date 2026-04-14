@@ -97,6 +97,28 @@ export interface NotificationResponse {
   timestamp: string;
 }
 
+export interface BasicAnalytics {
+  user_id: number;
+  total_schedules: number;
+  taken: number;
+  missed: number;
+  adherence_rate: number;
+}
+
+export const getBasicAnalyticsAPI = async (userId: number): Promise<BasicAnalytics> => {
+  const response = await fetch(`${apiBaseUrl}/api/analytics/${userId}?t=${Date.now()}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Lỗi tải dữ liệu báo cáo!');
+  }
+  return await response.json() as BasicAnalytics;
+};
+
 export const getNotificationsAPI = async (userId: number): Promise<NotificationResponse[]> => {
   const response = await fetch(`${apiBaseUrl}/api/notifications/${userId}?t=${Date.now()}`, {
     headers: {

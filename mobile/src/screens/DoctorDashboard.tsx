@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Card } from '../components/Card';
-import { Users, Phone, User as UserIcon, Calendar, Activity } from 'lucide-react-native';
+import { Users, Phone, User as UserIcon, Calendar, Activity, BarChart2 } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { User, getDoctorPatientsAPI, PatientResponse, checkMissedSchedulesAPI } from '../services/api';
 
 interface DoctorDashboardProps {
   user: User;
+  onViewAnalytics?: (patientId: number, patientName: string) => void;
 }
 
-export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user }) => {
+export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user, onViewAnalytics }) => {
   const [patients, setPatients] = useState<PatientResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [expandedPatientId, setExpandedPatientId] = useState<number | null>(null);
@@ -126,6 +127,14 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ user }) => {
                 ) : (
                   <Text style={{color: theme.colors.textMuted, fontSize: 13, marginTop: 8}}>Không có đơn thuốc nào.</Text>
                 )}
+                <View style={styles.divider} />
+                <TouchableOpacity 
+                  style={{ backgroundColor: theme.colors.primaryLight, padding: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', margin: 16, marginTop: 12 }}
+                  onPress={() => onViewAnalytics && onViewAnalytics(p.id, p.name)}
+                >
+                  <BarChart2 size={18} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                  <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>📊 Xem Báo Cáo Phân Tích</Text>
+                </TouchableOpacity>
               </View>
             )}
           </Card>

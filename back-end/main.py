@@ -326,6 +326,15 @@ def create_prescription(payload: PrescriptionCreate, db: Session = Depends(get_d
 
     db.commit()
 
+    # Thêm thông báo
+    notif_msg = f"Đơn thuốc mới: {prescription.medicine} ({len(created_schedules)} lần/ngày) đã được thêm vào lịch uống của bạn."
+    notif = NotificationDB(
+        user_id=payload.user_id,
+        message=notif_msg
+    )
+    db.add(notif)
+    db.commit()
+
     return {
         "message": "Prescription created successfully",
         "prescription_id": prescription.id,
@@ -582,7 +591,8 @@ def analytics(user_id: int, db: Session = Depends(get_db)):
         .count()
     )
 
-    adherence_rate = (taken_count / total_schedules * 100) if total_schedules > 0 else 0
+    total_historical_logs = taken_count + missed_count
+    adherence_rate = (taken_count / total_historical_logs * 100) if total_historical_logs > 0 else 0
 
     return {
         "user_id": user_id,

@@ -12,6 +12,7 @@ import { Notifications } from './src/screens/Notifications';
 import { MedicationReminder } from './src/screens/MedicationReminder';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { DoctorDashboard } from './src/screens/DoctorDashboard';
+import { DoctorPatientReport } from './src/screens/DoctorPatientReport';
 import { Medication, TabId } from './src/types';
 import { User, confirmMedicationAPI } from './src/services/api';
 import { InAppNotificationBanner } from './src/components/InAppNotificationBanner';
@@ -22,6 +23,7 @@ export default function App() {
   const [activeMedication, setActiveMedication] = useState<Medication | null>(null);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [doctorViewingPatient, setDoctorViewingPatient] = useState<{id: number, name: string} | null>(null);
 
   const [toastMessage, setToastMessage] = useState<string>('');
 
@@ -99,7 +101,15 @@ export default function App() {
     switch (activeTab) {
       case 'home':
         if (currentUser.role === 'doctor') {
-          return <DoctorDashboard user={currentUser} />;
+          return (
+            <DoctorDashboard 
+              user={currentUser} 
+              onViewAnalytics={(id, name) => { 
+                setDoctorViewingPatient({id, name}); 
+                setActiveTab('doctor-report'); 
+              }} 
+            />
+          );
         }
         return (
           <HomeDashboard 
@@ -109,6 +119,20 @@ export default function App() {
             onScheduleHit={(title, body) => setInAppNotice({ title, body })}
           />
         );
+      case 'doctor-report':
+        if (currentUser.role === 'doctor' && doctorViewingPatient) {
+          return (
+            <DoctorPatientReport 
+              patientId={doctorViewingPatient.id} 
+              patientName={doctorViewingPatient.name} 
+              onBack={() => { 
+                setDoctorViewingPatient(null); 
+                setActiveTab('home'); 
+              }} 
+            />
+          );
+        }
+        return <DoctorDashboard user={currentUser} />;
       case 'analytics':
         return <Analytics />;
       case 'scan':
@@ -119,6 +143,7 @@ export default function App() {
                 setRefreshKey(prev => prev + 1); 
                 setActiveTab('home'); 
                 setToastMessage('Thêm đơn thuốc thành công!'); 
+                setTimeout(() => setToastMessage(''), 1500);
             }} 
             onCancel={() => setActiveTab('home')}
           />
