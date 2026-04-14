@@ -9,6 +9,11 @@ from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 import requests
 import os
 from dotenv import load_dotenv
+import paho.mqtt.client as mqtt
+import threading
+import json
+
+
 
 load_dotenv()
 
@@ -63,6 +68,9 @@ class UserDB(Base):
     prescriptions = relationship("PrescriptionDB", back_populates="user")
     logs = relationship("MedicationLogDB", back_populates="user")
     notifications = relationship("NotificationDB", back_populates="user")
+
+    birth_date = Column(String, nullable=True) 
+    gender = Column(String, nullable=True) 
 
 
 class PrescriptionDB(Base):
@@ -128,6 +136,53 @@ Base.metadata.create_all(bind=engine)
 # FASTAPI APP
 # =========================
 app = FastAPI(title="Smart Medicine Backend")
+# config HiveMQ
+MQTT_BROKER = "e2ff4c4614e54fec99e240de636f03eb.s1.eu.hivemq.cloud"
+MQTT_PORT = 1883
+MQTT_USER = "admin"
+MQTT_PASS = "Admin@123"
+
+TOPIC_CONFIRM = "smart_cabinet/device/confirm"
+TOPIC_DISPENSE = "smart_cabinet/device/dispense"
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("✅ MQTT CONNECTED TO HIVEMQ!")
+        client.subscribe(TOPIC_CONFIRM)
+        print(f"📡 Subscribed to: {TOPIC_CONFIRM}")
+    else:
+        print("❌ MQTT CONNECTION FAILED, code:", rc)
+
+def on_message(client, userdata, msg):
+    print("\n📩 MQTT MESSAGE RECEIVED")
+    print("Topic:", msg.topic)
+    print("Payload:", msg.payload.decode())
+
+    # test parse JSON
+    try:
+        data = json.loads(msg.payload.decode())
+        print("Parsed JSON:", data)
+    except:
+        print("⚠️ Not a JSON message")
+
+def start_mqtt():
+    client = mqtt.Client()
+
+    client.username_pw_set(MQTT_USER, MQTT_PASS)
+
+    # 👇 QUAN TRỌNG
+    client.tls_set()
+
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    print("🔄 Connecting to MQTT broker...")
+    client.connect(MQTT_BROKER, 8883, 60)
+
+    client.loop_forever()
+
+# chạy MQTT ở background
+threading.Thread(target=start_mqtt, daemon=True).start()
 
 # Cho phép Web App và thiết bị ngoại vi gọi API mà không bị lỗi CORS (Blocked by CORS policy)
 app.add_middleware(
@@ -182,6 +237,75 @@ class ConfirmRequest(BaseModel):
     medicine: str = Field(..., example="Paracetamol")
     time: str = Field(..., example="08:00")
 
+
+#Nhận message
+def on_message(client, userdata, msg):
+    print("\n📩 MQTT MESSAGE RECEIVED")
+    print("Topic:", msg.topic)
+    print("Payload:", msg.payload.decode())
+
+    db = SessionLocal()
+
+    try:
+        data = json.loads(msg.payload.decode())
+
+        schedule_id = data.get("schedule_id")
+        status = data.get("status")
+
+        if not schedule_id:
+            print("❌ Missing schedule_id")
+            return
+
+        # 🔍 tìm schedule theo id
+        schedule = db.query(ScheduleDB).filter(ScheduleDB.id == schedule_id).first()
+
+        if not schedule:
+            print(f"❌ Schedule {schedule_id} not found")
+            return
+
+        # ❗ tránh update lại nhiều lần
+        if schedule.status != "pending":
+            print(f"⚠️ Schedule {schedule_id} already processed")
+            return
+
+        # 🎯 xử lý trạng thái
+        if status == "CONFIRMED_TAKEN":
+            schedule.status = "taken"
+            log_status = "taken"
+
+        elif status == "MISSED_TIMEOUT":
+            schedule.status = "missed"
+            log_status = "missed"
+
+        else:
+            print("❌ Unknown status")
+            return
+
+        # 🔗 lấy prescription để log
+        prescription = db.query(PrescriptionDB).filter(
+            PrescriptionDB.id == schedule.prescription_id
+        ).first()
+
+        # 📝 lưu log
+        log = MedicationLogDB(
+            user_id=prescription.user_id,
+            schedule_id=schedule.id,
+            medicine=prescription.medicine,
+            scheduled_time=schedule.time,
+            status=log_status,
+            timestamp=datetime.utcnow(),
+        )
+
+        db.add(log)
+        db.commit()
+
+        print(f"✅ Updated schedule {schedule_id} → {log_status}")
+
+    except Exception as e:
+        print("❌ MQTT ERROR:", e)
+
+    finally:
+        db.close()
 
 # =========================
 # API 1: AUTHENTICATION
@@ -374,6 +498,53 @@ def get_schedule(user_id: int, db: Session = Depends(get_db)):
 
     return result
 
+# =========================
+# API 3: GET NEXT DOSE FOR DEVICE
+# =========================
+@app.get("/api/device/next-dose/{user_id}")
+def get_next_dose(user_id: int, db: Session = Depends(get_db)):
+    now = datetime.now().strftime("%H:%M")
+
+    # tìm schedule gần nhất chưa uống
+    record = (
+        db.query(ScheduleDB, PrescriptionDB)
+        .join(PrescriptionDB, ScheduleDB.prescription_id == PrescriptionDB.id)
+        .filter(PrescriptionDB.user_id == user_id)
+        .filter(ScheduleDB.status == "pending")
+        .order_by(ScheduleDB.time)
+        .first()
+    )
+
+    if not record:
+        return {"message": "No medicine to take now"}
+
+    schedule, prescription = record
+
+    return {
+        "medicineName": prescription.medicine,
+        "quantity": prescription.dosage
+    }
+
+# Send mesage to MQTT
+def send_mqtt_dispense(schedule_id, medicine, quantity):
+    client = mqtt.Client()
+    client.username_pw_set(MQTT_USER, MQTT_PASS)
+    client.tls_set()
+    client.connect(MQTT_BROKER, 8883, 60)
+
+    client.loop_start()
+
+    data = {
+        "schedule_id": schedule_id,
+        "medicineName": medicine,
+        "quantity": quantity
+    }
+
+    result = client.publish(TOPIC_DISPENSE, json.dumps(data))
+    result.wait_for_publish()
+
+    client.loop_stop()
+    client.disconnect()
 
 # =========================
 # API 4: DEVICE CONFIRM
@@ -436,7 +607,7 @@ def check_missed_schedules(background_tasks: BackgroundTasks, db: Session = Depe
         .join(PrescriptionDB, ScheduleDB.prescription_id == PrescriptionDB.id)
         .filter(ScheduleDB.status == "pending")
         .all()
-    )
+    )  
 
     missed_count = 0
     reminders_count = 0
@@ -446,11 +617,14 @@ def check_missed_schedules(background_tasks: BackgroundTasks, db: Session = Depe
             scheduled_datetime = datetime.strptime(schedule.time, "%H:%M")
             now_datetime = datetime.strptime(current_time_str, "%H:%M")
             diff_minutes = (now_datetime - scheduled_datetime).total_seconds() / 60
+            print(diff_minutes)
             
             patient = db.query(UserDB).filter(UserDB.id == prescription.user_id).first()
             
             # 1. NHẮC TRƯỚC GIỜ (Dành cho Demo): Sớm hơn 5 phút so với giờ uống
-            if -5 <= diff_minutes <= 0:
+            if -5 <= diff_minutes <= 0:            
+                send_mqtt_dispense(schedule.id, prescription.medicine, prescription.dosage)
+                print("📤 Sent MQTT to ESP32")
                 if schedule.sms_reminder_sent == 0:
                     if patient and patient.push_token:
                         msg = f"[SmartMed] Sap den gio uong thuoc {prescription.medicine} luc {schedule.time}. Vui long chuan bi nuoc!"
