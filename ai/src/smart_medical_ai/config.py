@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="SMART_MEDICAL_AI_",
         case_sensitive=False,
+        env_file=str(AI_DIR / ".env"),
+        env_file_encoding="utf-8",
     )
 
     app_name: str = "Smart Medical AI"

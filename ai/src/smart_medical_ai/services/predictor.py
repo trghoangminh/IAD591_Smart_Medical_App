@@ -75,28 +75,35 @@ class PredictorService:
         candidate_factors = []
         values = payload.model_dump()
 
+        _FEATURE_VI: dict[str, str] = {
+            "missed_doses_last_30d":   "Liều bỏ lỡ trong 30 ngày",
+            "previous_adherence_rate": "Tỉ lệ tuân thủ lịch sử",
+            "daily_dose_count":        "Số lần uống mỗi ngày",
+            "caregiver_support":       "Hỗ trợ từ người chăm sóc",
+        }
+
         def add_factor(feature: str, severity: str, detail: str) -> None:
             candidate_factors.append(
                 {
                     "feature": feature,
                     "weight": self._importance_weight(feature_importances, feature),
-                    "factor": feature.replace("_", " ").capitalize(),
+                    "factor": _FEATURE_VI.get(feature, feature.replace("_", " ").capitalize()),
                     "severity": severity,
                     "detail": detail,
                 }
             )
 
         if values["missed_doses_last_30d"] >= 6:
-            add_factor("missed_doses_last_30d", "high", "So lieu bo lo trong 30 ngay qua dang o muc cao.")
+            add_factor("missed_doses_last_30d", "high", "Số liều bỏ lỡ trong 30 ngày qua đang ở mức cao.")
         if values["previous_adherence_rate"] < 0.75:
-            add_factor("previous_adherence_rate", "high", "Ti le tuan thu lich su thap, de tai dien hanh vi quen thuoc.")
+            add_factor("previous_adherence_rate", "high", "Tỉ lệ tuân thủ lịch sử thấp, dễ tái diễn hành vi quên thuốc.")
         if values["daily_dose_count"] >= 4:
-            add_factor("daily_dose_count", "medium", "Phac do nhieu lan trong ngay lam giam kha nang tuan thu.")
+            add_factor("daily_dose_count", "medium", "Phác đồ nhiều lần trong ngày làm giảm khả năng tuân thủ.")
         if not values["caregiver_support"]:
-            add_factor("caregiver_support", "medium", "Khong co nguoi ho tro nhac khi lich dung thuoc phuc tap.")
+            add_factor("caregiver_support", "medium", "Không có người hỗ trợ nhắc khi lịch dùng thuốc phức tạp.")
 
         if not candidate_factors:
-            add_factor("previous_adherence_rate", "protective", "Ti le tuan thu lich su tot va on dinh.")
+            add_factor("previous_adherence_rate", "protective", "Tỉ lệ tuân thủ lịch sử tốt và ổn định.")
 
         ordered = sorted(
             candidate_factors,
@@ -118,12 +125,12 @@ class PredictorService:
         risk_factor_names = {factor.factor.lower() for factor in top_factors}
 
         if "missed doses last 30d" in risk_factor_names or payload.missed_doses_last_30d >= 6:
-            recommendations.append("Tang can suat follow-up 48-72 gio va tao nhac lan hai cho cac lieu hay bi quen.")
+            recommendations.append("Tăng tần suất follow-up 48–72 giờ và tạo nhắc lần hai cho các liều hay bị quên.")
         if predicted_label == "high":
-            recommendations.append("Xep benh nhan vao nhom can can thiệp som va theo doi sat trong 2 tuan toi.")
+            recommendations.append("Xếp bệnh nhân vào nhóm cần can thiệp sớm và theo dõi sát trong 2 tuần tới.")
 
         if not recommendations:
-            recommendations.append("Duy tri phac do hien tai va tiep tuc theo doi trend tuan de phat hien som bien dong.")
+            recommendations.append("Duy trì phác đồ hiện tại và tiếp tục theo dõi xu hướng tuần để phát hiện sớm biến động.")
 
         return recommendations[:3]
 

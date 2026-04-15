@@ -79,4 +79,4 @@ export interface AnalyticsChartsResponse {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
-export type TabId = 'home' | 'analytics' | 'scan' | 'history' | 'profile';
+export type TabId = 'home' | 'analytics' | 'scan' | 'history' | 'profile' | 'chat' | 'doctor-report';

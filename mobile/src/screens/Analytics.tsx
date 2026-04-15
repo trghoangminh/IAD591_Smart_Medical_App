@@ -149,16 +149,6 @@ export const Analytics: React.FC = () => {
         <Text style={styles.subtitle}>Theo dõi tiến độ uống thuốc của bạn</Text>
       </View>
 
-      <View style={styles.statusRow}>
-        <View style={[styles.statusPill, usingFallback && styles.statusPillWarning]}>
-          <Text style={[styles.statusPillText, usingFallback && styles.statusPillTextWarning]}>
-            {usingFallback ? 'Dữ liệu demo' : 'AI online'}
-          </Text>
-        </View>
-        {loading && <ActivityIndicator size="small" color={theme.colors.primary} />}
-      </View>
-      <Text style={styles.statusMessage}>{statusMessage}</Text>
-
       <View style={styles.filterRow}>
         {FILTER_OPTIONS.map((f) => (
           <TouchableOpacity
@@ -235,8 +225,8 @@ export const Analytics: React.FC = () => {
                           d.percentage === 100
                             ? theme.colors.primary
                             : d.percentage > 50
-                            ? theme.colors.warning
-                            : theme.colors.danger,
+                              ? theme.colors.warning
+                              : theme.colors.danger,
                       },
                     ]}
                   />

@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { User as UserIcon, Phone, LogOut, Bell, Moon } from 'lucide-react-native';
+import { User as UserIcon, Phone, LogOut, Bell, Moon, Clock, ChevronRight } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { User, getUserAPI } from '../services/api';
+import { TabId } from '../types';
 
 interface ProfileProps {
   onLogout: () => void;
   user: User;
+  onNavigate?: (tab: TabId) => void;
 }
 
-export const Profile: React.FC<ProfileProps> = ({ onLogout, user }) => {
+export const Profile: React.FC<ProfileProps> = ({ onLogout, user, onNavigate }) => {
   const [notifications, setNotifications] = useState<boolean>(true);
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [caretaker, setCaretaker] = useState<User | null>(null);
@@ -40,6 +42,24 @@ export const Profile: React.FC<ProfileProps> = ({ onLogout, user }) => {
           Vai trò: {user.role === 'patient' ? 'Bệnh nhân' : (user.role === 'doctor' ? 'Bác sĩ' : 'Người nhà')}
         </Text>
       </Card>
+
+      {user.role === 'patient' && (
+        <>
+          <Text style={styles.sectionTitle}>Hoạt động</Text>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => onNavigate?.('history')}>
+            <Card style={styles.navCard}>
+              <View style={styles.navIcon}>
+                <Clock size={20} color={theme.colors.primary} />
+              </View>
+              <View style={styles.navInfo}>
+                <Text style={styles.navTitle}>Lịch sử uống thuốc</Text>
+                <Text style={styles.navSub}>Xem lịch sử đã uống / bỏ lỡ</Text>
+              </View>
+              <ChevronRight size={18} color={theme.colors.textLight} />
+            </Card>
+          </TouchableOpacity>
+        </>
+      )}
 
       <Text style={styles.sectionTitle}>Liên hệ y tế</Text>
       
@@ -158,6 +178,23 @@ const styles = StyleSheet.create({
   settingLabel: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   settingText: { fontSize: 16, color: theme.colors.textMain, fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#F0F6F9', marginHorizontal: theme.spacing.md },
+  navCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: theme.spacing.sm + 4,
+  },
+  navIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navInfo: { flex: 1 },
+  navTitle: { fontSize: 15, fontWeight: '600', color: theme.colors.textMain },
+  navSub: { fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
   version: {
     textAlign: 'center',
     fontSize: 12,

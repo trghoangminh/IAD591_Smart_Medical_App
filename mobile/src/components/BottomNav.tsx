@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Home, ScanLine, BarChart2, Clock, User as UserIcon, Users, LucideIcon } from 'lucide-react-native';
+import { Home, ScanLine, BarChart2, Clock, User as UserIcon, Users, MessageCircle, LucideIcon } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { TabId } from '../types';
 
@@ -21,7 +21,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, us
     { id: 'home', label: 'Trang chủ', icon: Home },
     { id: 'analytics', label: 'Báo cáo', icon: BarChart2 },
     { id: 'scan', label: 'Quét', icon: ScanLine },
-    { id: 'history', label: 'Lịch sử', icon: Clock },
+    { id: 'chat', label: 'Trợ lý AI', icon: MessageCircle },
     { id: 'profile', label: 'Cá nhân', icon: UserIcon },
   ];
 

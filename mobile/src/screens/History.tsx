@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card } from '../components/Card';
-import { CheckCircle2, XCircle } from 'lucide-react-native';
+import { CheckCircle2, XCircle, ChevronLeft } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import { TimelineItem } from '../types';
 import { User, getHistoryAPI } from '../services/api';
 
 interface HistoryProps {
   user: User;
+  onBack?: () => void;
 }
 
 interface ProcessedTimelineItem extends TimelineItem {
   timestampDate: Date;
 }
 
-export const History: React.FC<HistoryProps> = ({ user }) => {
+export const History: React.FC<HistoryProps> = ({ user, onBack }) => {
   const [filter, setFilter] = useState<string>('Hôm nay');
   const [data, setData] = useState<ProcessedTimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,12 @@ export const History: React.FC<HistoryProps> = ({ user }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {onBack && (
+        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
+          <ChevronLeft size={20} color={theme.colors.primary} />
+          <Text style={styles.backText}>Quay lại</Text>
+        </TouchableOpacity>
+      )}
       <View style={styles.header}>
         <Text style={styles.title}>Lịch sử</Text>
         <Text style={styles.subtitle}>Theo dõi lịch sử uống thuốc</Text>
@@ -133,6 +140,8 @@ export const History: React.FC<HistoryProps> = ({ user }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.md, paddingBottom: 100 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm },
+  backText: { fontSize: 14, color: theme.colors.primary, fontWeight: '600', marginLeft: 2 },
   header: { marginBottom: theme.spacing.lg },
   title: { fontSize: theme.typography.fontSize.xl, fontWeight: 'bold', color: theme.colors.textMain },
   subtitle: { color: theme.colors.textLight, marginTop: 4 },

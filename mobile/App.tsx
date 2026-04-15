@@ -13,6 +13,7 @@ import { MedicationReminder } from './src/screens/MedicationReminder';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { DoctorDashboard } from './src/screens/DoctorDashboard';
 import { DoctorPatientReport } from './src/screens/DoctorPatientReport';
+import { ChatScreen } from './src/screens/ChatScreen';
 import { Medication, TabId } from './src/types';
 import { User, confirmMedicationAPI } from './src/services/api';
 import { InAppNotificationBanner } from './src/components/InAppNotificationBanner';
@@ -149,9 +150,11 @@ export default function App() {
           />
         );
       case 'history':
-        return <History user={currentUser} />;
+        return <History user={currentUser} onBack={() => setActiveTab('profile')} />;
+      case 'chat':
+        return <ChatScreen user={currentUser} />;
       case 'profile':
-        return <Profile onLogout={handleLogout} user={currentUser} />;
+        return <Profile onLogout={handleLogout} user={currentUser} onNavigate={setActiveTab} />;
       default:
         return (
           <HomeDashboard 

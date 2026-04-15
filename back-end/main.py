@@ -396,10 +396,16 @@ def get_patients(doctor_id: int, db: Session = Depends(get_db)):
     # Tuy nhiên vì thời gian MVP, ta trả thông tin cơ bản kèm adherence rate tĩnh
     results = []
     for p in patients:
-        schedules = db.query(ScheduleDB).join(PrescriptionDB).filter(PrescriptionDB.user_id == p.id).all()
-        total = len(schedules)
-        taken = sum(1 for s in schedules if s.status == "taken")
-        adherence = round((taken / total * 100) if total > 0 else 100)
+        taken = db.query(MedicationLogDB).filter(
+            MedicationLogDB.user_id == p.id,
+            MedicationLogDB.status == "taken"
+        ).count()
+        missed = db.query(MedicationLogDB).filter(
+            MedicationLogDB.user_id == p.id,
+            MedicationLogDB.status == "missed"
+        ).count()
+        total_logs = taken + missed
+        adherence = round((taken / total_logs * 100) if total_logs > 0 else 100)
         
         prescriptions_db = db.query(PrescriptionDB).filter(PrescriptionDB.user_id == p.id).all()
         prescriptions_list = []
