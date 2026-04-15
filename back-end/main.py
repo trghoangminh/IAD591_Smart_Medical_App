@@ -1,4 +1,5 @@
-from datetime import datetime
+import re
+from datetime import datetime, timedelta, date
 from typing import Generator, List, Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, BackgroundTasks
@@ -215,6 +216,8 @@ class RegisterRequest(BaseModel):
     phone: Optional[str] = Field(default=None, example="0987654321")
     email: Optional[str] = Field(default=None, example="abc@example.com")
     caretaker_id: Optional[int] = Field(default=None, example=2)
+    birth_date: Optional[str] = Field(default=None, example="1990-01-15")
+    gender: Optional[Literal["male", "female", "other"]] = Field(default=None)
 
 class LoginRequest(BaseModel):
     username: str = Field(..., description="Phone number or Email", example="0987654321")
@@ -325,7 +328,9 @@ def register(user: RegisterRequest, db: Session = Depends(get_db)):
         password=user.password,
         phone=user.phone,
         email=user.email,
-        caretaker_id=user.caretaker_id
+        caretaker_id=user.caretaker_id,
+        birth_date=user.birth_date,
+        gender=user.gender,
     )
     db.add(new_user)
     db.commit()
@@ -774,6 +779,108 @@ def analytics(user_id: int, db: Session = Depends(get_db)):
         "taken": taken_count,
         "missed": missed_count,
         "adherence_rate": round(adherence_rate, 2),
+    }
+
+
+# =========================
+# API 9: ML FEATURES FOR AI SERVICE
+# =========================
+
+# Bảng map tên thuốc tiếng Việt/ngoặc → tên chuẩn ML
+_MEDICINE_CANONICAL: dict[str, str] = {
+    "amlodipine": "Amlodipine",
+    "metformin": "Metformin",
+    "atorvastatin": "Atorvastatin",
+    "insulin": "Insulin",
+    "warfarin": "Warfarin",
+}
+
+def _normalize_medicine(name: str) -> str:
+    """Bỏ phần tiếng Việt trong ngoặc, map về tên chuẩn ML."""
+    cleaned = re.sub(r'\s*\([^)]*\)', '', name).strip()
+    return _MEDICINE_CANONICAL.get(cleaned.lower(), cleaned)
+
+
+@app.get("/api/patient/{user_id}/ml-features")
+def get_patient_ml_features(user_id: int, db: Session = Depends(get_db)):
+    """Tính 9 features cho ML adherence prediction từ dữ liệu thực."""
+    user = db.query(UserDB).filter(UserDB.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    today = date.today()
+
+    # 1. Age — tính từ birth_date, clamp 18–100
+    age = 55  # default
+    if user.birth_date:
+        try:
+            dob = date.fromisoformat(user.birth_date)
+            age = max(18, min(100, (today - dob).days // 365))
+        except ValueError:
+            pass
+
+    # 2. Gender
+    gender = user.gender if user.gender in ("male", "female", "other") else "other"
+
+    # 3. Prescriptions
+    prescriptions = db.query(PrescriptionDB).filter(PrescriptionDB.user_id == user_id).all()
+    medication_count = max(1, len(prescriptions))
+
+    # Đơn thuốc chính: ưu tiên đang active (end_date >= today), rồi mới nhất
+    active_rx = [
+        p for p in prescriptions
+        if not p.end_date or p.end_date >= today.isoformat()
+    ]
+    main_rx = active_rx[0] if active_rx else (prescriptions[-1] if prescriptions else None)
+
+    medication_name = _normalize_medicine(main_rx.medicine) if main_rx else "Unknown"
+
+    # 4. Daily dose count — số schedule của đơn chính
+    daily_dose_count = 1
+    if main_rx:
+        count = db.query(ScheduleDB).filter(ScheduleDB.prescription_id == main_rx.id).count()
+        daily_dose_count = max(1, count)
+
+    # 5. Missed doses last 30 days
+    cutoff_30d = datetime.utcnow() - timedelta(days=30)
+    missed_30d = db.query(MedicationLogDB).filter(
+        MedicationLogDB.user_id == user_id,
+        MedicationLogDB.status == "missed",
+        MedicationLogDB.timestamp >= cutoff_30d
+    ).count()
+
+    # 6. Caregiver support
+    caregiver_support = user.caretaker_id is not None
+
+    # 7. Previous adherence rate — toàn bộ lịch sử logs
+    all_logs = db.query(MedicationLogDB).filter(MedicationLogDB.user_id == user_id).all()
+    if all_logs:
+        taken_count = sum(1 for log in all_logs if log.status == "taken")
+        previous_adherence_rate = round(taken_count / len(all_logs), 4)
+    else:
+        previous_adherence_rate = 0.85
+
+    # 8. Treatment duration — kể từ đơn thuốc sớm nhất
+    treatment_duration_days = 180
+    start_dates = [p.start_date for p in prescriptions if p.start_date]
+    if start_dates:
+        try:
+            earliest = date.fromisoformat(min(start_dates))
+            treatment_duration_days = max(1, min(3650, (today - earliest).days))
+        except ValueError:
+            pass
+
+    return {
+        "patient_id": str(user_id),
+        "age": age,
+        "gender": gender,
+        "medication_name": medication_name,
+        "medication_count": medication_count,
+        "daily_dose_count": daily_dose_count,
+        "missed_doses_last_30d": missed_30d,
+        "caregiver_support": caregiver_support,
+        "previous_adherence_rate": previous_adherence_rate,
+        "treatment_duration_days": treatment_duration_days,
     }
 
 

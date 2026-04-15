@@ -18,15 +18,10 @@ class AdherencePredictionRequest(BaseModel):
     medication_name: str = Field(default="Metformin", min_length=2)
     medication_count: int = Field(default=2, ge=1, le=12)
     daily_dose_count: int = Field(default=2, ge=1, le=12)
-    refill_gap_days: int = Field(default=0, ge=0, le=90)
     missed_doses_last_30d: int = Field(default=1, ge=0, le=120)
-    side_effect_severity: int = Field(default=2, ge=0, le=10)
-    cost_burden_score: int = Field(default=2, ge=0, le=10)
-    reminder_enabled: bool = True
     caregiver_support: bool = False
     previous_adherence_rate: float = Field(default=0.92, ge=0.0, le=1.0)
     treatment_duration_days: int = Field(default=180, ge=1, le=3650)
-    condition_complexity_score: int = Field(default=3, ge=0, le=10)
 
 
 class RiskFactor(BaseModel):

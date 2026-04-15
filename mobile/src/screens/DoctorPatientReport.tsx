@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Card } from '../components/Card';
+import { AIPredictionCard } from '../components/AIPredictionCard';
 import { theme } from '../styles/theme';
-import { getBasicAnalyticsAPI, getHistoryAPI, BasicAnalytics, HistoryResponse } from '../services/api';
+import { getBasicAnalyticsAPI, getHistoryAPI, getPatientMLFeaturesAPI, BasicAnalytics, HistoryResponse } from '../services/api';
+import { predictAdherence, PredictionResponse } from '../services/analytics';
 
 interface DoctorPatientReportProps {
   patientId: number;
@@ -15,8 +17,14 @@ export const DoctorPatientReport: React.FC<DoctorPatientReportProps> = ({ patien
   const [history, setHistory] = useState<HistoryResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
+  const [predLoading, setPredLoading] = useState(true);
+  const [predError, setPredError] = useState<string | null>(null);
+
   useEffect(() => {
     let active = true;
+
+    // Tải analytics + lịch sử từ backend
     const loadData = async () => {
       setLoading(true);
       try {
@@ -26,15 +34,32 @@ export const DoctorPatientReport: React.FC<DoctorPatientReportProps> = ({ patien
         ]);
         if (active) {
           setAnalytics(analyticsData);
-          setHistory(historyData.slice(0, 20)); // Lấy 20 lịch sử gần nhất
+          setHistory(historyData.slice(0, 20));
         }
       } catch (err) {
-        console.warn("Lỗi tải báo cáo thật:", err);
+        console.warn("Lỗi tải báo cáo:", err);
       } finally {
         if (active) setLoading(false);
       }
     };
+
+    // Tải ML features từ backend → gửi sang AI service để predict
+    const loadPrediction = async () => {
+      setPredLoading(true);
+      setPredError(null);
+      try {
+        const features = await getPatientMLFeaturesAPI(patientId);
+        const result = await predictAdherence(features);
+        if (active) setPrediction(result);
+      } catch (err) {
+        if (active) setPredError('Dịch vụ phân tích AI đang tạm ngắt.');
+      } finally {
+        if (active) setPredLoading(false);
+      }
+    };
+
     loadData();
+    loadPrediction();
     return () => { active = false; };
   }, [patientId]);
 
@@ -75,14 +100,22 @@ export const DoctorPatientReport: React.FC<DoctorPatientReportProps> = ({ patien
                 </View>
               </View>
             ) : (
-              <Text style={{color: theme.colors.textMuted}}>Không thể tải dữ liệu tổng quan.</Text>
+              <Text style={{ color: theme.colors.textMuted }}>Không thể tải dữ liệu tổng quan.</Text>
             )}
           </Card>
+
+          {/* AI Prediction Card */}
+          <Text style={styles.sectionTitle}>Dự đoán rủi ro AI</Text>
+          <AIPredictionCard
+            prediction={prediction}
+            loading={predLoading}
+            error={predError}
+          />
 
           <Text style={styles.sectionTitle}>Sổ Nhật Ký Gần Nhất</Text>
           <Card>
             {history.length === 0 ? (
-              <Text style={{color: theme.colors.textMuted}}>Bệnh nhân chưa có lịch sử uống thuốc nào.</Text>
+              <Text style={{ color: theme.colors.textMuted }}>Bệnh nhân chưa có lịch sử uống thuốc nào.</Text>
             ) : (
               history.map((log) => (
                 <View key={log.log_id} style={styles.historyRow}>
@@ -91,8 +124,8 @@ export const DoctorPatientReport: React.FC<DoctorPatientReportProps> = ({ patien
                     <Text style={styles.timeText}>{formatDate(log.timestamp)} (Lịch: {log.scheduled_time})</Text>
                   </View>
                   <View style={[
-                    styles.statusBadge, 
-                    { backgroundColor: log.status === 'taken' ? theme.colors.successLight : theme.colors.dangerLight }
+                    styles.statusBadge,
+                    { backgroundColor: log.status === 'taken' ? '#E8F8EF' : theme.colors.dangerLight }
                   ]}>
                     <Text style={[
                       styles.statusText,
@@ -141,5 +174,5 @@ const styles = StyleSheet.create({
   medicineName: { fontSize: 16, fontWeight: '600', color: theme.colors.textMain },
   timeText: { fontSize: 12, color: theme.colors.textMuted, marginTop: 4 },
   statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  statusText: { fontSize: 12, fontWeight: 'bold' }
+  statusText: { fontSize: 12, fontWeight: 'bold' },
 });

@@ -95,7 +95,7 @@ def extract_feature_importances(pipeline: Pipeline) -> dict[str, float]:
     return {
         name: round(float(value), 6)
         for name, value in sorted(
-            zip(transformed_names, raw_importances, strict=False),
+            zip(transformed_names, raw_importances),
             key=lambda item: item[1],
             reverse=True,
         )

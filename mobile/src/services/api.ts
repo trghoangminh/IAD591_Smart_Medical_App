@@ -179,6 +179,33 @@ export const getDoctorPatientsAPI = async (doctorId: number): Promise<PatientRes
 };
 
 
+export interface MLFeatures {
+  patient_id: string;
+  age: number;
+  gender: 'male' | 'female' | 'other';
+  medication_name: string;
+  medication_count: number;
+  daily_dose_count: number;
+  missed_doses_last_30d: number;
+  caregiver_support: boolean;
+  previous_adherence_rate: number;
+  treatment_duration_days: number;
+}
+
+export const getPatientMLFeaturesAPI = async (userId: number): Promise<MLFeatures> => {
+  const response = await fetch(`${apiBaseUrl}/api/patient/${userId}/ml-features?t=${Date.now()}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Lỗi tải dữ liệu ML features!');
+  }
+  return await response.json() as MLFeatures;
+};
+
 export const checkMissedSchedulesAPI = async (): Promise<void> => {
   try {
     const response = await fetch(`${apiBaseUrl}/api/cron/check-missed-schedules`, {

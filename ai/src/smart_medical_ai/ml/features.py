@@ -18,30 +18,20 @@ FEATURE_COLUMNS = [
     "medication_name",
     "medication_count",
     "daily_dose_count",
-    "refill_gap_days",
     "missed_doses_last_30d",
-    "side_effect_severity",
-    "cost_burden_score",
-    "reminder_enabled",
     "caregiver_support",
     "previous_adherence_rate",
     "treatment_duration_days",
-    "condition_complexity_score",
 ]
 
 NUMERIC_FEATURES = [
     "age",
     "medication_count",
     "daily_dose_count",
-    "refill_gap_days",
     "missed_doses_last_30d",
-    "side_effect_severity",
-    "cost_burden_score",
-    "reminder_enabled",
     "caregiver_support",
     "previous_adherence_rate",
     "treatment_duration_days",
-    "condition_complexity_score",
 ]
 
 CATEGORICAL_FEATURES = ["gender", "medication_name"]
@@ -52,15 +42,10 @@ DEFAULT_FEATURE_VALUES: dict[str, Any] = {
     "medication_name": "Unknown",
     "medication_count": 2,
     "daily_dose_count": 2,
-    "refill_gap_days": 2,
     "missed_doses_last_30d": 2,
-    "side_effect_severity": 2,
-    "cost_burden_score": 2,
-    "reminder_enabled": 1,
     "caregiver_support": 0,
     "previous_adherence_rate": 0.85,
     "treatment_duration_days": 180,
-    "condition_complexity_score": 3,
 }
 
 TARGET_COLUMN = "non_adherent"
@@ -88,29 +73,11 @@ COLUMN_ALIASES: dict[str, list[str]] = {
         "dose_frequency",
         "frequency",
     ],
-    "refill_gap_days": [
-        "refill_gap",
-        "refill_delay_days",
-        "days_since_refill",
-        "refill_delay",
-    ],
     "missed_doses_last_30d": [
         "missed_doses",
         "missed_doses_last_month",
         "missed_doses_last_30_days",
     ],
-    "side_effect_severity": [
-        "side_effects_score",
-        "side_effect_score",
-        "side_effects",
-    ],
-    "cost_burden_score": [
-        "cost_score",
-        "medication_cost_burden",
-        "cost_barrier_score",
-        "cost_barrier",
-    ],
-    "reminder_enabled": ["reminders", "reminder_use", "uses_reminder"],
     "caregiver_support": ["family_support", "support_system", "care_support"],
     "previous_adherence_rate": [
         "adherence_rate",
@@ -123,12 +90,6 @@ COLUMN_ALIASES: dict[str, list[str]] = {
         "treatment_duration",
         "therapy_duration_days",
         "days_on_therapy",
-    ],
-    "condition_complexity_score": [
-        "comorbidity_count",
-        "chronic_conditions",
-        "disease_complexity",
-        "condition_complexity",
     ],
     TARGET_COLUMN: [
         "adherence_status",
@@ -284,25 +245,9 @@ def prepare_feature_frame(payload: dict[str, Any] | pd.DataFrame) -> pd.DataFram
         DEFAULT_FEATURE_VALUES["medication_count"],
     )
     features["daily_dose_count"] = _coerce_daily_doses(renamed.get("daily_dose_count"))
-    features["refill_gap_days"] = _coerce_numeric(
-        renamed.get("refill_gap_days"),
-        DEFAULT_FEATURE_VALUES["refill_gap_days"],
-    )
     features["missed_doses_last_30d"] = _coerce_numeric(
         renamed.get("missed_doses_last_30d"),
         DEFAULT_FEATURE_VALUES["missed_doses_last_30d"],
-    )
-    features["side_effect_severity"] = _coerce_numeric(
-        renamed.get("side_effect_severity"),
-        DEFAULT_FEATURE_VALUES["side_effect_severity"],
-    )
-    features["cost_burden_score"] = _coerce_numeric(
-        renamed.get("cost_burden_score"),
-        DEFAULT_FEATURE_VALUES["cost_burden_score"],
-    )
-    features["reminder_enabled"] = _coerce_bool(
-        renamed.get("reminder_enabled"),
-        int(DEFAULT_FEATURE_VALUES["reminder_enabled"]),
     )
     features["caregiver_support"] = _coerce_bool(
         renamed.get("caregiver_support"),
@@ -315,10 +260,6 @@ def prepare_feature_frame(payload: dict[str, Any] | pd.DataFrame) -> pd.DataFram
     features["treatment_duration_days"] = _coerce_numeric(
         renamed.get("treatment_duration_days"),
         DEFAULT_FEATURE_VALUES["treatment_duration_days"],
-    )
-    features["condition_complexity_score"] = _coerce_numeric(
-        renamed.get("condition_complexity_score"),
-        DEFAULT_FEATURE_VALUES["condition_complexity_score"],
     )
 
     for column in NUMERIC_FEATURES:
@@ -362,28 +303,18 @@ def generate_bootstrap_dataset(sample_count: int = 640, seed: int = 42) -> pd.Da
             "medication_name": rng.choice(medication_names, size=sample_count),
             "medication_count": rng.integers(1, 6, size=sample_count),
             "daily_dose_count": rng.integers(1, 5, size=sample_count),
-            "refill_gap_days": rng.integers(0, 15, size=sample_count),
             "missed_doses_last_30d": rng.integers(0, 12, size=sample_count),
-            "side_effect_severity": rng.integers(0, 8, size=sample_count),
-            "cost_burden_score": rng.integers(0, 8, size=sample_count),
-            "reminder_enabled": rng.choice([0, 1], size=sample_count, p=[0.35, 0.65]),
             "caregiver_support": rng.choice([0, 1], size=sample_count, p=[0.7, 0.3]),
             "previous_adherence_rate": rng.uniform(0.45, 0.99, size=sample_count),
             "treatment_duration_days": rng.integers(14, 900, size=sample_count),
-            "condition_complexity_score": rng.integers(1, 9, size=sample_count),
         }
     )
 
     risk_signal = (
-        0.07 * frame["refill_gap_days"]
-        + 0.11 * frame["missed_doses_last_30d"]
-        + 0.10 * frame["side_effect_severity"]
-        + 0.09 * frame["cost_burden_score"]
+        0.11 * frame["missed_doses_last_30d"]
         + 0.12 * frame["daily_dose_count"]
-        + 0.07 * frame["condition_complexity_score"]
         + 0.03 * frame["medication_count"]
         - 1.40 * frame["previous_adherence_rate"]
-        - 0.45 * frame["reminder_enabled"]
         - 0.30 * frame["caregiver_support"]
     )
     probabilities = 1.0 / (1.0 + np.exp(-(risk_signal - 1.5)))

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from smart_medical_ai.config import settings
 from smart_medical_ai.routers.analytics import router as analytics_router
+from smart_medical_ai.routers.chat import router as chat_router
 from smart_medical_ai.services.predictor import predictor_service
 
 
@@ -31,6 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(analytics_router)
+app.include_router(chat_router)
 
 
 @app.get("/health")

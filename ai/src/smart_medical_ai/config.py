@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     bootstrap_sample_count: int = 640
     random_state: int = 42
 
+    # Chatbot settings
+    google_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+    backend_database_path: Path = AI_DIR.parent / "back-end" / "smart_medicine.db"
+    chat_history_days: int = 14
+    chat_prescription_limit: int = 10
+
     def ensure_directories(self) -> None:
         self.raw_data_dir.mkdir(parents=True, exist_ok=True)
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
