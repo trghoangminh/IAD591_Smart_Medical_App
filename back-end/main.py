@@ -609,97 +609,55 @@ def confirm_medicine(payload: ConfirmRequest, db: Session = Depends(get_db)):
 # API 5: CHECK MISSED SCHEDULES (Cron/Job)
 # =========================
 @app.post("/api/cron/check-missed-schedules")
-def check_missed_schedules(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    now = datetime.now() # Căn chuẩn giờ địa phương hiện tại
-    current_time_str = now.strftime("%H:%M") 
-    
+def check_missed_schedules(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    now = datetime.now()
+    current_time_str = now.strftime("%H:%M")
+
     schedules = (
         db.query(ScheduleDB, PrescriptionDB)
         .join(PrescriptionDB, ScheduleDB.prescription_id == PrescriptionDB.id)
         .filter(ScheduleDB.status == "pending")
         .all()
-    )  
+    )
 
-    missed_count = 0
     reminders_count = 0
-    
+
     for schedule, prescription in schedules:
         try:
             scheduled_datetime = datetime.strptime(schedule.time, "%H:%M")
             now_datetime = datetime.strptime(current_time_str, "%H:%M")
+
             diff_minutes = (now_datetime - scheduled_datetime).total_seconds() / 60
-            print(diff_minutes)
-            
-            patient = db.query(UserDB).filter(UserDB.id == prescription.user_id).first()
-            
-            # 1. NHẮC TRƯỚC GIỜ (Dành cho Demo): Sớm hơn 5 phút so với giờ uống
-            if -5 <= diff_minutes <= 0:            
-                send_mqtt_dispense(schedule.id, prescription.medicine, prescription.dosage)
-                print("📤 Sent MQTT to ESP32")
+            print(f"[DEBUG] schedule {schedule.id} diff = {diff_minutes}")
+
+            # ✅ CHỈ gửi MQTT khi đến giờ (±1 phút)
+            if 0 <= diff_minutes <= 1:
                 if schedule.sms_reminder_sent == 0:
-                    if patient and patient.push_token:
-                        msg = f"[SmartMed] Sap den gio uong thuoc {prescription.medicine} luc {schedule.time}. Vui long chuan bi nuoc!"
-                        background_tasks.add_task(send_notification, patient.push_token, "Đến giờ uống thuốc", msg)
+                    
+                    send_mqtt_dispense(
+                        schedule.id,
+                        prescription.medicine,
+                        prescription.dosage
+                    )
+
+                    print(f"📤 Sent MQTT for schedule {schedule.id}")
+
+                    # đánh dấu đã gửi để tránh spam
                     schedule.sms_reminder_sent = 1
                     reminders_count += 1
-            
-            # 2. KHẨN CẤP QUÁ GIỜ (Dành cho Demo): Chỉ cần trễ qua 2 phút -> Ghi án phạt Missed
-            if diff_minutes > 2: 
-                schedule.status = "missed"
-                missed_count += 1
-                
-                log = MedicationLogDB(
-                    user_id=prescription.user_id,
-                    schedule_id=schedule.id,
-                    medicine=prescription.medicine,
-                    scheduled_time=schedule.time,
-                    status="missed",
-                    timestamp=datetime.utcnow(),
-                )
-                db.add(log)
-                
-                if patient:
-                    # Gửi App Push ảo cho bệnh nhân
-                    notif_patient = NotificationDB(
-                        user_id=patient.id,
-                        message=f"Bạn đã quên uống {prescription.medicine} theo lịch lúc {schedule.time}."
-                    )
-                    db.add(notif_patient)
-                    
-                    # Truy lùng Bác Sĩ / Người nhà để bắt đền
-                    if patient.caretaker_id:
-                        notif_caretaker = NotificationDB(
-                            user_id=patient.caretaker_id,
-                            message=f"Bệnh nhân {patient.name} đã bỏ lỡ liều {prescription.medicine} lúc {schedule.time}."
-                        )
-                        db.add(notif_caretaker)
-                        
-                        # BẮN SMS CẤP CỨU CHO BÁC SĨ (Chỉ bắn 1 lần)
-                        if schedule.sms_missed_sent == 0:
-                            caretaker = db.query(UserDB).filter(UserDB.id == patient.caretaker_id).first()
-                            
-                            # Fallback: Tránh lỗi trùng SDT làm hỏng Database, 
-                            # Cứ gửi thẳng về SDT của Bệnh nhân để test nếu Doctor trống SDT!
-                            doctor_token = caretaker.push_token if caretaker and caretaker.push_token else patient.push_token
-                            
-                            # Cho phép Push Telegram khẩn cấp dù người dùng thiếu Token thiết bị
-                            msg_sos_body = f"""🚨 *BÁO ĐỘNG QUÊN THUỐC* 🚨
-
-Hệ thống y tế SmartMed ghi nhận bệnh nhân đã bỏ lỡ lịch uống thuốc. Bác sĩ hoặc người nhà vui lòng liên hệ ngay để đôn đốc nhé!
-
-👤 **Bệnh nhân:** {patient.name}
-💊 **Loại thuốc:** {prescription.medicine}
-⏰ **Giờ lên lịch:** {schedule.time}
-⚠️ **Trạng thái:** Quá hạn báo động"""
-                            background_tasks.add_task(send_notification, doctor_token or "telegram", "🚨 CẢNH BÁO QUÊN THUỐC", msg_sos_body)
-                            
-                            schedule.sms_missed_sent = 1
 
         except Exception as e:
-            pass 
+            print("❌ ERROR:", e)
 
     db.commit()
-    return {"message": "Cronjob Done", "missed": missed_count, "reminders_sent": reminders_count}
+
+    return {
+        "message": "Cronjob Done",
+        "mqtt_sent": reminders_count
+    }
 
 
 # =========================
